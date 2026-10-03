@@ -1,0 +1,37 @@
+<view class="page">
+  <view class="profile">
+    <view class="avatar-wrap" bindtap="onAvatarTap">
+      <image wx:if="{{shop.avatarUrl}}" class="avatar-img" src="{{shop.avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="avatar-default">
+        <text class="avatar-icon">👤</text>
+      </view>
+      <view class="avatar-camera">📷</view>
+    </view>
+    <view class="profile-info">
+      <view class="shop-name">{{shop.name}}</view>
+      <view class="owner">{{shop.owner}}<text wx:if="{{shop.owner && shop.phone}}"> · </text>{{shop.phone}}</view>
+    </view>
+    <view class="status-btn {{shop.status === '营业中' ? 'open' : 'closed'}}" bindtap="toggleShop">{{shop.status}}</view>
+  </view>
+
+  <view class="card menu-card">
+    <view
+      class="menu-row"
+      wx:for="{{menus}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="handleMenu"
+    >
+      <text class="menu-icon">{{item.icon}}</text>
+      <text class="menu-label">{{item.name}}</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="card switch-card" bindtap="switchRole">
+    <text class="switch-text">切换到「我是顾客」</text>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="reset" bindtap="backToRoleSelect">重新选择身份</view>
+</view>

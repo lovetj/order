@@ -1,0 +1,35 @@
+<view class="page">
+  <view class="header">
+    <view class="header-title">领券中心</view>
+    <view class="header-sub">领取后可在「我的-优惠券」查看</view>
+    <view class="header-link" bindtap="goMyCoupons">我的优惠券 ›</view>
+  </view>
+
+  <block wx:if="{{list.length > 0}}">
+    <view class="coupon-card" wx:for="{{list}}" wx:key="id">
+      <view class="coupon-left">
+        <view class="coupon-amount">
+          <text wx:if="{{item.type === 2}}" class="num">{{item.discountText}}</text>
+          <text wx:else class="num">{{item.amount}}</text>
+          <text class="unit">{{item.type === 2 ? '折' : '元'}}</text>
+        </view>
+        <view class="coupon-threshold">{{item.threshold > 0 ? '满' + item.threshold + '可用' : '无门槛'}}</view>
+      </view>
+      <view class="coupon-right">
+        <view class="coupon-name">{{item.name}}</view>
+        <view class="coupon-desc">{{item.description}}</view>
+        <view class="coupon-meta">
+          <text wx:if="{{item.validDays > 0}}">领取后 {{item.validDays}} 天内有效</text>
+          <text wx:else>有效期至 {{item.endTime}}</text>
+          <text class="coupon-limit" wx:if="{{item.perLimit > 1}}">每人限领 {{item.perLimit}} 张</text>
+        </view>
+      </view>
+      <view class="receive-btn" data-id="{{item.id}}" bindtap="receive">立即领取</view>
+    </view>
+  </block>
+
+  <view wx:else class="empty">
+    <view class="empty-icon">🎫</view>
+    <view class="empty-text">暂无可领取的优惠券</view>
+  </view>
+</view>

@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="tip">共 {{list.length}} 张优惠券</view>
+
+  <view class="coupon-card" wx:for="{{list}}" wx:key="id">
+    <view class="coupon-head">
+      <view class="coupon-name">{{item.name}}</view>
+      <view class="coupon-status {{item.status === 1 ? 'on' : 'off'}}" data-id="{{item.id}}" catchtap="toggleStatus">
+        {{item.status === 1 ? '启用中' : '已停用'}}
+      </view>
+    </view>
+    <view class="coupon-body">
+      <view class="coupon-value">{{couponDesc(item)}}</view>
+      <view class="coupon-meta">
+        <text>已发放 {{item.issuedCount}} 张</text>
+        <text class="dot-sep">·</text>
+        <text>{{item.totalCount < 0 ? '不限量' : '总量 ' + item.totalCount}}</text>
+        <text class="dot-sep">·</text>
+        <text>每人限领 {{item.perLimit}} 张</text>
+      </view>
+      <view class="coupon-valid">
+        {{item.validDays > 0 ? '领取后 ' + item.validDays + ' 天内有效' : '固定有效期'}}
+      </view>
+    </view>
+    <view class="coupon-foot">
+      <view class="del-btn" data-id="{{item.id}}" catchtap="deleteCoupon">删除</view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length === 0}}" class="empty">暂无优惠券，点击右下角新增</view>
+
+  <view class="fab" bindtap="addCoupon">＋</view>
+</view>

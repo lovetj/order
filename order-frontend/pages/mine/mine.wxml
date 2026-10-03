@@ -1,0 +1,36 @@
+<!--pages/mine/mine.wxml-->
+<view class="container">
+  <view class="user-card" bindtap="goMember">
+    <view class="avatar">
+      <image wx:if="{{isAvatarUrl}}" class="avatar-img" src="{{userInfo.avatar}}" mode="aspectFill" />
+      <text wx:else>{{userInfo.avatar || '🙋'}}</text>
+    </view>
+    <view class="user-info">
+      <view class="nickname">{{userInfo.nickName || '微信用户'}}</view>
+      <view class="user-tip">{{userInfo.memberLevel || '普通会员'}} · 桌号 {{tableNo}}</view>
+    </view>
+    <view class="member-entry">
+      <view class="member-points">{{points}} 积分</view>
+      <view class="member-coupon">{{couponCount}} 张券</view>
+    </view>
+  </view>
+
+  <view class="stats">
+    <view class="stat" wx:for="{{stats}}" wx:key="label">
+      <view class="stat-value">{{item.value}}</view>
+      <view class="stat-label">{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-item" wx:for="{{menus}}" wx:key="key" data-key="{{item.key}}" bindtap="handleMenu">
+      <view class="menu-icon">{{item.icon}}</view>
+      <view class="menu-name">{{item.name}}</view>
+      <view wx:if="{{item.key === 'coupon' && couponCount > 0}}" class="menu-badge">{{couponCount}}</view>
+      <view class="menu-arrow">›</view>
+    </view>
+  </view>
+
+  <view class="btn-plain action-btn" bindtap="switchRole">切换到店家端</view>
+  <view class="btn-plain action-btn" bindtap="logout">退出登录</view>
+</view>

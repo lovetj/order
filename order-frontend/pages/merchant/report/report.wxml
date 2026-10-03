@@ -1,0 +1,98 @@
+<view class="page">
+  <!-- 日期筛选 -->
+  <view class="filter">
+    <view class="range-tabs">
+      <view
+        wx:for="{{ranges}}"
+        wx:key="key"
+        class="range-tab {{activeRange === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="switchRange"
+      >{{item.label}}</view>
+    </view>
+    <view class="date-row">
+      <picker mode="date" value="{{startDate}}" bindchange="onStartChange">
+        <view class="date-picker">{{startDate}}</view>
+      </picker>
+      <text class="date-sep">至</text>
+      <picker mode="date" value="{{endDate}}" bindchange="onEndChange">
+        <view class="date-picker">{{endDate}}</view>
+      </picker>
+    </view>
+    <view class="export-row">
+      <view class="export-btn" bindtap="exportReport">📥 导出报表</view>
+      <view class="export-btn" bindtap="exportOrders">📋 导出订单</view>
+    </view>
+  </view>
+
+  <!-- 汇总卡片 -->
+  <view class="summary-card">
+    <view class="summary-main">
+      <view class="summary-label">营业额</view>
+      <view class="summary-value">¥{{summary.amount || '0.00'}}</view>
+    </view>
+    <view class="summary-sub">
+      <view class="sub-item">
+        <view class="sub-value">{{summary.orderCount || 0}}</view>
+        <view class="sub-label">订单数</view>
+      </view>
+      <view class="sub-item">
+        <view class="sub-value">¥{{summary.avgAmount || '0.00'}}</view>
+        <view class="sub-label">客单价</view>
+      </view>
+      <view class="sub-item">
+        <view class="sub-value">{{summary.canceledCount || 0}}</view>
+        <view class="sub-label">已取消</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 每日明细 -->
+  <view class="card">
+    <view class="section-title">每日营业额</view>
+    <view wx:if="{{dailyList.length > 0}}" class="daily-list">
+      <view class="daily-item" wx:for="{{dailyList}}" wx:key="date">
+        <view class="daily-date">{{item.date}}</view>
+        <view class="daily-bar-wrap">
+          <view class="daily-bar" style="width: {{item.percent}}%;"></view>
+        </view>
+        <view class="daily-right">
+          <text class="daily-amount">¥{{item.amount}}</text>
+          <text class="daily-count">{{item.orderCount}} 单</text>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="empty">当前区间暂无数据</view>
+  </view>
+
+  <!-- 菜品销量排行 -->
+  <view class="card">
+    <view class="section-title">菜品销量排行 TOP10</view>
+    <view wx:if="{{topDishes.length > 0}}" class="rank-list">
+      <view class="rank-item" wx:for="{{topDishes}}" wx:key="dishName">
+        <view class="rank-no {{index < 3 ? 'top' : ''}}">{{index + 1}}</view>
+        <view class="rank-name">{{item.dishName}}</view>
+        <view class="rank-num">x{{item.quantity}}</view>
+        <view class="rank-amount">¥{{item.amount}}</view>
+      </view>
+    </view>
+    <view wx:else class="empty">当前区间暂无数据</view>
+  </view>
+
+  <!-- 分类销量 -->
+  <view class="card">
+    <view class="section-title">分类销售额</view>
+    <view wx:if="{{categoryList.length > 0}}">
+      <view class="cat-item" wx:for="{{categoryList}}" wx:key="categoryName">
+        <view class="cat-head">
+          <text class="cat-name">{{item.categoryName || '未分类'}}</text>
+          <text class="cat-amount">¥{{item.amount}} · {{item.quantity}} 份</text>
+        </view>
+        <view class="cat-bar-wrap">
+          <view class="cat-bar" style="width: {{getBarWidth(item.amount, categoryList)}}%;"></view>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="empty">当前区间暂无数据</view>
+  </view>
+</view>

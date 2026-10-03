@@ -1,0 +1,136 @@
+/* pages/mine/mine.wxss */
+.user-card {
+  display: flex;
+  align-items: center;
+  padding: 60rpx 40rpx 50rpx;
+  background: linear-gradient(135deg, #ff6b35, #ff9a62);
+  color: #fff;
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.member-entry {
+  text-align: right;
+}
+
+.member-points {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.member-coupon {
+  font-size: 22rpx;
+  opacity: 0.9;
+  margin-top: 10rpx;
+}
+
+.menu-badge {
+  min-width: 36rpx;
+  height: 36rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12rpx;
+}
+
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+  margin-right: 28rpx;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+}
+
+.nickname {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.user-tip {
+  font-size: 24rpx;
+  opacity: 0.9;
+  margin-top: 12rpx;
+}
+
+.stats {
+  display: flex;
+  background: #fff;
+  margin: -30rpx 24rpx 0;
+  border-radius: 20rpx;
+  padding: 32rpx 0;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 10rpx;
+}
+
+.menu-card {
+  background: #fff;
+  margin: 24rpx;
+  border-radius: 20rpx;
+  padding: 0 28rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 32rpx 0;
+  border-bottom: 1rpx solid #f4f4f4;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-icon {
+  font-size: 40rpx;
+  margin-right: 24rpx;
+}
+
+.menu-name {
+  flex: 1;
+  font-size: 30rpx;
+}
+
+.menu-arrow {
+  color: #ccc;
+  font-size: 44rpx;
+}
+
+.action-btn {
+  margin: 24rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+}

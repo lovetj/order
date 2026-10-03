@@ -1,0 +1,183 @@
+/* pages/login/login.wxss */
+.login-page {
+  min-height: 100vh;
+  padding: 120rpx 60rpx 80rpx;
+  background: linear-gradient(180deg, #fff4ef 0%, #f5f6f8 45%);
+  display: flex;
+  flex-direction: column;
+}
+
+.back {
+  position: absolute;
+  top: 88rpx;
+  left: 44rpx;
+  font-size: 30rpx;
+  color: #8a8a8a;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 60rpx;
+}
+
+.logo {
+  font-size: 120rpx;
+  line-height: 1;
+  margin-bottom: 22rpx;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #1f1f1f;
+  letter-spacing: 3rpx;
+}
+
+.subtitle {
+  font-size: 26rpx;
+  color: #8a8a8a;
+  margin-top: 14rpx;
+}
+
+.table-tag {
+  display: inline-block;
+  margin-top: 22rpx;
+  padding: 8rpx 26rpx;
+  background: #fff1eb;
+  color: #ff6b35;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 50rpx 40rpx;
+  box-shadow: 0 10rpx 36rpx rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- 顾客端头像授权 ---------- */
+.avatar-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 44rpx;
+}
+
+.avatar-btn {
+  width: 160rpx;
+  height: 160rpx;
+  padding: 0;
+  border-radius: 50%;
+  background: #f5f6f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  line-height: 1;
+}
+
+.avatar-btn::after {
+  border: none;
+}
+
+.avatar-img {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+}
+
+.avatar-placeholder {
+  font-size: 64rpx;
+  color: #c8c8c8;
+}
+
+.avatar-tip {
+  margin-top: 18rpx;
+  font-size: 24rpx;
+  color: #8a8a8a;
+}
+
+/* ---------- 表单 ---------- */
+.field {
+  margin-bottom: 34rpx;
+}
+
+.field-label {
+  font-size: 26rpx;
+  color: #8a8a8a;
+  margin-bottom: 14rpx;
+}
+
+.field-input {
+  height: 92rpx;
+  background: #f6f7f9;
+  border-radius: 18rpx;
+  padding: 0 28rpx;
+  font-size: 30rpx;
+  color: #1f1f1f;
+}
+
+/* ---------- 密码输入（带明文切换） ---------- */
+.pwd-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pwd-input {
+  flex: 1;
+  padding-right: 88rpx;
+}
+
+.pwd-toggle {
+  position: absolute;
+  right: 24rpx;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  color: #8a8a8a;
+}
+
+/* ---------- 按钮 ---------- */
+.submit-btn {
+  margin-top: 30rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: normal;
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+.wx-btn {
+  background: linear-gradient(135deg, #4ecb73, #2fb457);
+}
+
+.merchant-btn {
+  background: linear-gradient(135deg, #4f9cf9, #2f80ed);
+}
+
+.wx-icon {
+  margin-right: 10rpx;
+}
+
+.hint {
+  margin-top: 30rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #b0b0b0;
+  line-height: 1.6;
+}

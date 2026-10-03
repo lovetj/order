@@ -1,0 +1,36 @@
+<view class="page">
+  <!-- 积分头部 -->
+  <view class="points-header">
+    <view class="points-left">
+      <view class="points-label">我的积分</view>
+      <view class="points-value">{{myPoints}}</view>
+    </view>
+    <view class="points-right" bindtap="goMyExchanges">
+      <text class="record-icon">📋</text>
+      <text class="record-text">兑换记录</text>
+    </view>
+  </view>
+
+  <view class="tip">1 元 = 1 积分，消费自动累积</view>
+
+  <view class="goods-grid">
+    <view class="goods-item" wx:for="{{goods}}" wx:key="id">
+      <view class="goods-thumb">
+        <image wx:if="{{item.imageUrl}}" class="goods-thumb-img" src="{{item.image}}" mode="aspectFill"></image>
+        <text wx:else>{{item.image}}</text>
+      </view>
+      <view class="goods-name">{{item.name}}</view>
+      <view class="goods-desc">{{item.description}}</view>
+      <view class="goods-stock">
+        <text wx:if="{{item.stock < 0}}">不限量</text>
+        <text wx:else>剩余 {{item.stock}} 件</text>
+      </view>
+      <view class="goods-bottom">
+        <view class="goods-points">{{item.points}} 积分</view>
+        <view class="exchange-btn {{myPoints >= item.points ? '' : 'disabled'}}" data-id="{{item.id}}" bindtap="exchange">兑换</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{goods.length === 0}}" class="empty">暂无可兑换商品</view>
+</view>

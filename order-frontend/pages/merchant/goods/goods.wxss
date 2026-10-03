@@ -1,0 +1,154 @@
+j.summary {
+  display: flex;
+  background: linear-gradient(135deg, #2f80ed, #1a5fd0);
+  color: #fff;
+  padding: 36rpx 0 44rpx;
+}
+
+.summary-item {
+  flex: 1;
+  text-align: center;
+}
+
+.summary-value {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.summary-label {
+  font-size: 24rpx;
+  opacity: 0.85;
+  margin-top: 8rpx;
+}
+
+.cats {
+  display: flex;
+  white-space: nowrap;
+  background: #fff;
+  padding: 20rpx 24rpx;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.cat {
+  display: inline-block;
+  padding: 12rpx 32rpx;
+  margin-right: 18rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  font-size: 26rpx;
+  color: #666;
+}
+
+.cat.active {
+  background: #2f80ed;
+  color: #fff;
+  font-weight: 600;
+}
+
+.goods-item {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 26rpx 24rpx;
+  margin: 16rpx 24rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.04);
+}
+
+.thumb {
+  width: 130rpx;
+  height: 130rpx;
+  border-radius: 16rpx;
+  background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 66rpx;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+}
+
+.info {
+  flex: 1;
+  margin-left: 22rpx;
+}
+
+.name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.desc {
+  margin-top: 8rpx;
+}
+
+.meta {
+  margin-top: 14rpx;
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+}
+
+.meta .price {
+  font-size: 30rpx;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16rpx;
+}
+
+.shelf-tag {
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+}
+
+.shelf-tag.on {
+  background: #e8f6ec;
+  color: #34c759;
+}
+
+.shelf-tag.off {
+  background: #f2f3f5;
+  color: #999;
+}
+
+.edit-btn {
+  padding: 8rpx 26rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  border: 2rpx solid #2f80ed;
+  color: #2f80ed;
+}
+
+.edit-btn.price-btn {
+  border-color: #ff6b35;
+  color: #ff6b35;
+}
+
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 160rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4d95f5, #2f80ed);
+  color: #fff;
+  font-size: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10rpx 26rpx rgba(47, 128, 237, 0.4);
+  z-index: 100;
+}

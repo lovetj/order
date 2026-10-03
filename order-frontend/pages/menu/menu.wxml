@@ -1,0 +1,82 @@
+<!--pages/menu/menu.wxml-->
+<view class="menu-page">
+  <!-- 左侧分类 -->
+  <scroll-view class="cat-list" scroll-y>
+    <view
+      class="cat-item {{currentCategory === 'all' ? 'active' : ''}}"
+      data-id="all"
+      bindtap="switchCategory"
+    >热销</view>
+    <view
+      wx:for="{{categories}}"
+      wx:key="id"
+      class="cat-item {{currentCategory === item.id ? 'active' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="switchCategory"
+    >{{item.name}}</view>
+  </scroll-view>
+
+  <!-- 右侧商品 -->
+  <scroll-view class="goods-list" scroll-y>
+    <view class="goods-card" wx:for="{{goodsList}}" wx:key="id">
+      <view class="goods-img">
+        <image wx:if="{{item.imageUrl}}" class="goods-img-real" src="{{item.image}}" mode="aspectFill"></image>
+        <text wx:else>{{item.image}}</text>
+      </view>
+      <view class="goods-main">
+        <view class="goods-name">{{item.name}}</view>
+        <view class="goods-desc">{{item.desc}}</view>
+        <view class="goods-sales">已售 {{item.sales}}</view>
+        <view class="goods-row">
+          <text class="price">¥{{item.price}}</text>
+          <view class="stepper">
+            <view wx:if="{{item.count > 0}}" class="step-btn minus" data-id="{{item.id}}" bindtap="minusItem">−</view>
+            <text wx:if="{{item.count > 0}}" class="step-num">{{item.count}}</text>
+            <view class="step-btn plus" data-id="{{item.id}}" bindtap="addItem">＋</view>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="bottom-space"></view>
+  </scroll-view>
+
+  <!-- 购物车面板 -->
+  <view wx:if="{{showCart}}" class="cart-mask" bindtap="closeCart"></view>
+  <view wx:if="{{showCart}}" class="cart-panel">
+    <view class="cart-head">
+      <text>已选商品</text>
+      <text class="cart-clear" bindtap="clearCart">🗑 清空</text>
+    </view>
+    <scroll-view scroll-y class="cart-list">
+      <view class="cart-item" wx:for="{{cartList}}" wx:key="key">
+        <view class="cart-img">
+          <image wx:if="{{item.imageUrl}}" class="cart-img-real" src="{{item.image}}" mode="aspectFill"></image>
+          <text wx:else>{{item.image}}</text>
+        </view>
+        <view class="cart-info">
+          <view class="cart-name">{{item.name}}</view>
+          <view wx:if="{{item.specText}}" class="cart-spec">{{item.specText}}</view>
+        </view>
+        <text class="price">¥{{item.price}}</text>
+        <view class="stepper small">
+          <view class="step-btn minus" data-key="{{item.key}}" bindtap="minusItem">−</view>
+          <text class="step-num">{{item.count}}</text>
+          <view class="step-btn plus" data-id="{{item.id}}" bindtap="addItem">＋</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 结算栏 -->
+  <view class="checkout-bar">
+    <view class="cart-entry" bindtap="toggleCart">
+      <view class="cart-icon {{cartCount ? 'active' : ''}}">🛒</view>
+      <view wx:if="{{cartCount}}" class="badge">{{cartCount}}</view>
+    </view>
+    <view class="checkout-amount">
+      <text wx:if="{{cartCount}}" class="total">合计 <text class="price">¥{{cartAmount}}</text></text>
+      <text wx:else class="empty-tip">请选择菜品</text>
+    </view>
+    <view class="checkout-btn {{cartCount ? '' : 'disabled'}}" bindtap="submitOrder">去结算</view>
+  </view>
+</view>

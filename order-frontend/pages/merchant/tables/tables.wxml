@@ -1,0 +1,26 @@
+<view class="page">
+  <view class="tip">长按桌位可修改桌号或删除</view>
+
+  <view class="grid">
+    <view
+      class="table-card {{item.status ? 'enabled' : 'disabled'}}"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindlongpress="onTableLongPress"
+    >
+      <view class="table-no">{{item.tableNo}}</view>
+      <view class="table-capacity">{{item.capacity}} 人桌</view>
+      <view class="table-ops">
+        <view class="op qr" data-id="{{item.id}}" catchtap="showQrcode">二维码</view>
+        <view class="op status" data-id="{{item.id}}" catchtap="toggleStatus">
+          {{item.status ? '停用' : '启用'}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length === 0}}" class="empty">暂无桌位，点击右下角新增</view>
+
+  <view class="fab" bindtap="addTable">＋</view>
+</view>

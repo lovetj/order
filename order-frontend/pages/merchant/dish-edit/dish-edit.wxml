@@ -1,0 +1,176 @@
+<view class="page">
+  <!-- 图片上传 -->
+  <view class="card">
+    <view class="label">菜品图片</view>
+    <view class="img-area">
+      <image
+        wx:if="{{isImageUrl}}"
+        class="preview-img"
+        src="{{form.image}}"
+        mode="aspectFill"
+        bindtap="previewImage"
+      ></image>
+      <view wx:else class="preview">{{form.image}}</view>
+      <view class="img-ops">
+        <view class="img-btn primary" bindtap="chooseImage">
+          {{uploading ? '上传中...' : (isImageUrl ? '更换图片' : '上传图片')}}
+        </view>
+        <view wx:if="{{isImageUrl}}" class="img-btn" bindtap="removeImage">移除</view>
+      </view>
+    </view>
+
+    <view class="emoji-title">或选择图标（不传图片时使用）</view>
+    <view class="emoji-grid">
+      <view
+        wx:for="{{emojis}}"
+        wx:key="*this"
+        class="emoji-cell {{!isImageUrl && form.image === item ? 'active' : ''}}"
+        data-emoji="{{item}}"
+        bindtap="chooseEmoji"
+      >{{item}}</view>
+    </view>
+  </view>
+
+  <!-- 基本信息 -->
+  <view class="card">
+    <view class="form-row">
+      <text class="label">所属分类</text>
+      <picker
+        class="picker"
+        mode="selector"
+        range="{{categories}}"
+        range-key="name"
+        value="{{categoryIndex}}"
+        bindchange="onCategoryChange"
+      >
+        <view class="picker-value">
+          {{categories[categoryIndex].name || '请选择'}} <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-row">
+      <text class="label">菜品名称</text>
+      <input
+        class="input"
+        placeholder="如：招牌红烧肉"
+        value="{{form.name}}"
+        data-field="name"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="form-row">
+      <text class="label">菜品描述</text>
+      <input
+        class="input"
+        placeholder="如：肥而不腻，入口即化"
+        value="{{form.description}}"
+        data-field="description"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="form-row">
+      <text class="label">价格（元）</text>
+      <input
+        class="input"
+        type="digit"
+        placeholder="请输入价格"
+        value="{{form.price}}"
+        data-field="price"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="form-row">
+      <text class="label">库存</text>
+      <input
+        class="input"
+        type="number"
+        placeholder="默认 999"
+        value="{{form.stock}}"
+        data-field="stock"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="form-row">
+      <text class="label">排序</text>
+      <input
+        class="input"
+        type="number"
+        placeholder="数字越小越靠前"
+        value="{{form.sort}}"
+        data-field="sort"
+        bindinput="onInput"
+      />
+    </view>
+  </view>
+
+  <!-- 开关 -->
+  <view class="card">
+    <view class="form-row">
+      <text class="label">热销推荐</text>
+      <switch checked="{{form.isHot === 1}}" color="#ff6b35" bindchange="onHotChange" />
+    </view>
+    <view class="form-row">
+      <text class="label">上架销售</text>
+      <switch checked="{{form.status === 1}}" color="#2f80ed" bindchange="onStatusChange" />
+    </view>
+  </view>
+
+  <!-- 规格/口味配置 -->
+  <view class="card">
+    <view class="spec-head">
+      <text class="section-title">规格 / 口味（可选）</text>
+      <text class="spec-add" bindtap="addSpecGroup">＋ 添加分组</text>
+    </view>
+
+    <view class="spec-group" wx:for="{{specGroups}}" wx:key="groupName" wx:for-item="group" wx:for-index="gi">
+      <view class="spec-group-head">
+        <text class="spec-group-name">{{group.groupName}}</text>
+        <view class="spec-tags">
+          <text class="spec-tag {{group.selectType === 2 ? 'on' : ''}}" data-gi="{{gi}}" bindtap="toggleSelectType">
+            {{group.selectType === 2 ? '多选' : '单选'}}
+          </text>
+          <text class="spec-tag {{group.required === 1 ? 'on' : ''}}" data-gi="{{gi}}" bindtap="toggleRequired">
+            {{group.required === 1 ? '必选' : '可选'}}
+          </text>
+          <text class="spec-del" data-gi="{{gi}}" bindtap="removeSpecGroup">删除分组</text>
+        </view>
+      </view>
+
+      <view class="spec-options">
+        <view
+          class="spec-option {{opt.isDefault ? 'default' : ''}}"
+          wx:for="{{group.options}}"
+          wx:key="name"
+          wx:for-item="opt"
+          wx:for-index="oi"
+          data-gi="{{gi}}"
+          data-oi="{{oi}}"
+          bindtap="setDefaultOption"
+        >
+          <text class="opt-name">{{opt.name}}</text>
+          <text wx:if="{{opt.extraPrice > 0}}" class="opt-price">+{{opt.extraPrice}}</text>
+          <text wx:if="{{opt.isDefault}}" class="opt-default">默认</text>
+          <text class="opt-del" data-gi="{{gi}}" data-oi="{{oi}}" catchtap="removeSpecOption">×</text>
+        </view>
+        <view class="spec-option add" data-gi="{{gi}}" bindtap="addSpecOption">＋ 添加选项</view>
+      </view>
+    </view>
+
+    <view wx:if="{{specGroups.length === 0}}" class="spec-empty">
+      暂无规格，如「辣度」「加料」可点击右上角添加
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="btn-wrap">
+    <view class="btn-primary submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submit">
+      {{isEdit ? '保存修改' : '确认新增'}}
+    </view>
+    <view wx:if="{{isEdit}}" class="delete-btn" bindtap="remove">删除菜品</view>
+  </view>
+</view>

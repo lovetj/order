@@ -1,0 +1,22 @@
+<view class="page">
+  <view class="tip">共 {{list.length}} 个分类，点击名称可修改</view>
+
+  <view class="cat-card" wx:for="{{list}}" wx:key="id">
+    <view class="cat-sort">{{index + 1}}</view>
+    <view class="cat-info" data-id="{{item.id}}" bindtap="editCategory">
+      <view class="cat-name">{{item.name}}</view>
+      <view class="cat-code text-sub">编码：{{item.code}}</view>
+    </view>
+    <view class="cat-actions">
+      <view class="cat-status {{item.status === 1 ? 'on' : 'off'}}" data-id="{{item.id}}" catchtap="toggleStatus">
+        {{item.status === 1 ? '启用' : '禁用'}}
+      </view>
+      <view class="cat-op up" data-id="{{item.id}}" catchtap="moveUp">↑</view>
+      <view class="cat-op del" data-id="{{item.id}}" catchtap="deleteCategory">删除</view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length === 0}}" class="empty">暂无分类，点击右下角新增</view>
+
+  <view class="fab" bindtap="addCategory">＋</view>
+</view>

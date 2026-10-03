@@ -1,0 +1,149 @@
+/* pages/order/order.wxss */
+.tabs {
+  display: flex;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 28rpx 0;
+  font-size: 28rpx;
+  color: #666;
+  position: relative;
+}
+
+.tab.active {
+  color: #ff6b35;
+  font-weight: 600;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8rpx;
+  width: 48rpx;
+  height: 6rpx;
+  border-radius: 6rpx;
+  background: #ff6b35;
+}
+
+.empty {
+  padding: 160rpx 0;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 28rpx;
+  margin: 24rpx 0 32rpx;
+}
+
+.empty-btn {
+  display: inline-block;
+  padding: 16rpx 60rpx;
+  border-radius: 999rpx;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 28rpx;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f2f2f2;
+}
+
+.order-table {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.order-status {
+  font-size: 26rpx;
+}
+
+.status-pending { color: #ff9500; }
+.status-cooking { color: #007aff; }
+.status-done { color: #34c759; }
+.status-canceled { color: #999; }
+
+.order-items {
+  padding: 20rpx 0;
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0;
+  font-size: 26rpx;
+}
+
+.item-name {
+  flex: 1;
+  color: #444;
+}
+
+.item-count {
+  color: #999;
+  margin-right: 24rpx;
+}
+
+.item-price {
+  color: #333;
+  width: 100rpx;
+  text-align: right;
+}
+
+.order-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f2f2f2;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.order-total .price {
+  font-size: 34rpx;
+}
+
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24rpx;
+}
+
+.act-btn {
+  padding: 14rpx 36rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid #ddd;
+  font-size: 26rpx;
+  color: #666;
+  margin-left: 20rpx;
+}
+
+.act-btn.primary {
+  border-color: #ff6b35;
+  color: #ff6b35;
+}

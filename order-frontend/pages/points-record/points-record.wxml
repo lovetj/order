@@ -1,0 +1,34 @@
+<view class="page">
+  <block wx:if="{{list.length > 0}}">
+    <view class="record-card" wx:for="{{list}}" wx:key="id">
+      <view class="record-thumb">
+        <image wx:if="{{item.imageUrl}}" class="record-thumb-img" src="{{item.goodsImage}}" mode="aspectFill"></image>
+        <text wx:else>{{item.goodsImage}}</text>
+      </view>
+      <view class="record-info">
+        <view class="record-name">{{item.goodsName}}</view>
+        <view class="record-meta">兑换单号：{{item.exchangeNo}}</view>
+        <view class="record-meta">消耗积分：{{item.points}} · 数量 x{{item.quantity}}</view>
+        <view class="record-time">{{item.createTime}}</view>
+      </view>
+      <view class="record-right">
+        <view class="record-status status-{{item.status}}">
+          {{item.status === 0 ? '待发放' : (item.status === 1 ? '已发放' : '已核销')}}
+        </view>
+        <view
+          wx:if="{{item.status !== 2}}"
+          class="code-btn"
+          data-code="{{item.verifyCode}}"
+          data-name="{{item.goodsName}}"
+          bindtap="showCode"
+        >出示核销码</view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="empty">
+    <view class="empty-icon">🎁</view>
+    <view class="empty-text">暂无兑换记录</view>
+    <view class="empty-btn" bindtap="goPoints">去积分商城</view>
+  </view>
+</view>

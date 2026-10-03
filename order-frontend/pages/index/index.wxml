@@ -1,0 +1,75 @@
+<!--pages/index/index.wxml-->
+<view class="container">
+  <!-- 门店卡片 -->
+  <view class="shop-card">
+    <view class="shop-top">
+      <view class="shop-name">{{shop.name}}</view>
+      <view class="table-tag">桌号 {{tableNo}}</view>
+    </view>
+    <view class="shop-slogan">{{shop.slogan}}</view>
+    <view class="scan-btn" bindtap="scanTable">📷 扫码识别桌号</view>
+  </view>
+
+  <!-- 轮播 -->
+  <swiper class="banner" circular autoplay interval="3500" indicator-dots indicator-active-color="#ff6b35">
+    <swiper-item wx:for="{{banners}}" wx:key="id">
+      <view class="banner-item">
+        <view class="banner-emoji">{{item.emoji}}</view>
+        <view class="banner-info">
+          <view class="banner-title">{{item.title}}</view>
+          <view class="banner-desc">{{item.desc}}</view>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <!-- 公告 -->
+  <view class="notice-card">
+    <view class="notice-row" wx:for="{{notices}}" wx:key="*this">
+      <text class="notice-dot">·</text>
+      <text class="notice-text">{{item}}</text>
+    </view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="quick">
+    <view class="quick-item" bindtap="goMenu">
+      <view class="quick-icon">🍽️</view>
+      <view class="quick-text">立即点餐</view>
+    </view>
+    <view class="quick-item" bindtap="goMenu">
+      <view class="quick-icon">🔥</view>
+      <view class="quick-text">热销榜单</view>
+    </view>
+    <view class="quick-item" bindtap="goOrders">
+      <view class="quick-icon">🧾</view>
+      <view class="quick-text">我的订单</view>
+    </view>
+    <view class="quick-item" bindtap="scanTable">
+      <view class="quick-icon">📷</view>
+      <view class="quick-text">扫码点餐</view>
+    </view>
+  </view>
+
+  <!-- 推荐菜品 -->
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title">店长推荐</view>
+      <view class="section-more" bindtap="goMenu">全部 ›</view>
+    </view>
+    <view class="goods-grid">
+      <view class="goods-item" wx:for="{{recommend}}" wx:key="id" bindtap="goMenu">
+        <view class="goods-img">
+          <image wx:if="{{item.imageUrl}}" class="goods-img-real" src="{{item.image}}" mode="aspectFill"></image>
+          <text wx:else>{{item.image}}</text>
+        </view>
+        <view class="goods-name ellipsis">{{item.name}}</view>
+        <view class="goods-desc ellipsis">{{item.desc}}</view>
+        <view class="goods-bottom">
+          <text class="price">¥{{item.price}}</text>
+          <text class="add-btn">＋</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

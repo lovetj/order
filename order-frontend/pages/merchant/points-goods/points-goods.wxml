@@ -1,0 +1,43 @@
+<view class="page">
+  <!-- 核销区 -->
+  <view class="verify-card">
+    <view class="verify-title">🎫 核销码核销</view>
+    <view class="verify-row">
+      <input
+        class="verify-input"
+        placeholder="请输入顾客出示的核销码"
+        value="{{verifyCode}}"
+        bindinput="onVerifyInput"
+      />
+      <view class="verify-btn" bindtap="doVerify">核销</view>
+    </view>
+  </view>
+
+  <view class="tip">共 {{list.length}} 个积分商品</view>
+
+  <view class="goods-item" wx:for="{{list}}" wx:key="id">
+    <view class="thumb">
+      <image wx:if="{{item.imageUrl}}" class="thumb-img" src="{{item.image}}" mode="aspectFill"></image>
+      <text wx:else>{{item.image}}</text>
+    </view>
+    <view class="info">
+      <view class="name">{{item.name}}</view>
+      <view class="desc text-sub">{{item.description}}</view>
+      <view class="meta">
+        <text class="points">{{item.points}} 积分</text>
+        <text class="stock text-sub">{{item.stock < 0 ? '不限量' : '库存 ' + item.stock}}</text>
+        <text class="sales text-sub">已兑 {{item.exchangedCount}}</text>
+      </view>
+    </view>
+    <view class="actions">
+      <view class="shelf-tag {{item.status === 1 ? 'on' : 'off'}}" data-id="{{item.id}}" catchtap="toggleStatus">
+        {{item.status === 1 ? '已上架' : '已下架'}}
+      </view>
+      <view class="del-btn" data-id="{{item.id}}" catchtap="deleteGoods">删除</view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length === 0}}" class="empty">暂无积分商品，点击右下角新增</view>
+
+  <view class="fab" bindtap="addGoods">＋</view>
+</view>

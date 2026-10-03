@@ -1,0 +1,70 @@
+/**app.wxss**/
+page {
+  background: #f5f6f8;
+  color: #1f1f1f;
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --primary: #ff6b35;
+  --primary-light: #fff1eb;
+  --text-main: #1f1f1f;
+  --text-sub: #8a8a8a;
+  --line: #ececec;
+  --card: #ffffff;
+  --radius: 20rpx;
+}
+
+view,
+text,
+image,
+scroll-view,
+button {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  padding-bottom: 140rpx; /* 给自定义 tabBar 留出空间 */
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 28rpx;
+  margin: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.text-sub {
+  color: var(--text-sub);
+  font-size: 24rpx;
+}
+
+.price {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ff8a5c, #ff6b35);
+  color: #fff;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  border: none;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 26rpx;
+  padding: 120rpx 0;
+}

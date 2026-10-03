@@ -1,0 +1,84 @@
+.page {
+  padding: 24rpx;
+  padding-bottom: 160rpx;
+}
+
+.tip {
+  font-size: 24rpx;
+  color: #8a8a8a;
+  margin-bottom: 20rpx;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24rpx;
+}
+
+.table-card {
+  width: calc(50% - 12rpx);
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 36rpx 0 0;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border-top: 8rpx solid #2f80ed;
+}
+
+.table-card.disabled {
+  border-top-color: #c8c8c8;
+  opacity: 0.7;
+}
+
+.table-no {
+  font-size: 48rpx;
+  font-weight: 700;
+  text-align: center;
+  color: #1f1f1f;
+}
+
+.table-capacity {
+  font-size: 24rpx;
+  color: #8a8a8a;
+  text-align: center;
+  margin-top: 10rpx;
+}
+
+.table-ops {
+  display: flex;
+  margin-top: 28rpx;
+  border-top: 1rpx solid #f5f5f5;
+}
+
+.op {
+  flex: 1;
+  text-align: center;
+  padding: 22rpx 0;
+  font-size: 26rpx;
+}
+
+.op.qr {
+  color: #2f80ed;
+  border-right: 1rpx solid #f5f5f5;
+}
+
+.op.status {
+  color: #ff6b35;
+}
+
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 60rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4d95f5, #2f80ed);
+  color: #fff;
+  font-size: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10rpx 26rpx rgba(47, 128, 237, 0.4);
+  z-index: 100;
+}

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.order.mapper.DishMapper">
+
+    <resultMap id="DishWithCategoryMap" type="com.order.entity.Dish">
+        <id property="id" column="id"/>
+        <result property="shopId" column="shop_id"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="image" column="image"/>
+        <result property="price" column="price"/>
+        <result property="stock" column="stock"/>
+        <result property="sales" column="sales"/>
+        <result property="isHot" column="is_hot"/>
+        <result property="status" column="status"/>
+        <result property="sort" column="sort"/>
+        <result property="isDel" column="is_del"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <select id="selectDishWithCategory" resultMap="DishWithCategoryMap">
+        SELECT d.*, c.name AS category_name
+        FROM dish d
+        LEFT JOIN category c ON d.category_id = c.id AND c.shop_id = d.shop_id
+        <where>
+            <if test="shopId != null and shopId != ''">
+                AND d.shop_id = #{shopId}
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND d.category_id = #{categoryId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND d.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND d.status = #{status}
+            </if>
+            <if test="isDel != null">
+                AND d.is_del = #{isDel}
+            </if>
+        </where>
+        ORDER BY d.is_hot DESC, d.sort ASC, d.create_time DESC
+    </select>
+
+    <select id="selectPageWithCategory" resultMap="DishWithCategoryMap">
+        SELECT d.*, c.name AS category_name
+        FROM dish d
+        LEFT JOIN category c ON d.category_id = c.id AND c.shop_id = d.shop_id
+        <where>
+            <if test="shopId != null and shopId != ''">
+                AND d.shop_id = #{shopId}
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND d.category_id = #{categoryId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND d.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND d.status = #{status}
+            </if>
+            <if test="isDel != null">
+                AND d.is_del = #{isDel}
+            </if>
+        </where>
+        ORDER BY d.is_del ASC, d.status DESC, d.is_hot DESC, d.sort ASC, d.create_time DESC
+    </select>
+
+    <select id="selectDishById" resultMap="DishWithCategoryMap">
+        SELECT d.*, c.name AS category_name
+        FROM dish d
+        LEFT JOIN category c ON d.category_id = c.id AND c.shop_id = d.shop_id
+        WHERE d.id = #{id}
+        LIMIT 1
+    </select>
+
+</mapper>

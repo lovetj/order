@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="shop-bar">
+    <view>
+      <view class="shop-name">{{shop.name}}</view>
+      <view class="shop-status">今日经营数据</view>
+    </view>
+    <view class="status-btn {{shop.status === '营业中' ? 'open' : 'closed'}}" bindtap="toggleShop">{{shop.status}}</view>
+  </view>
+
+  <view class="overview">
+    <view class="overview-item" wx:for="{{overview}}" wx:key="label">
+      <view class="ov-label">{{item.label}}</view>
+      <view class="ov-value ov-{{item.color}}">{{item.value}}</view>
+      <view class="ov-extra">{{item.extra}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">近 7 日营业额</view>
+    <view class="chart">
+      <view class="chart-col" wx:for="{{weekSales}}" wx:key="day">
+        <view class="chart-bar-wrap">
+          <view class="chart-bar" style="height: {{item.percent}}%;"></view>
+        </view>
+        <view class="chart-day">{{item.day}}</view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,74 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: order-backend
+  servlet:
+    multipart:
+      enabled: true
+      # 框架层阈值略高于业务上限(10MB)，这样超限由 FileUploadController 返回友好提示，
+      # 而不是被框架直接抛异常导致前端只看到「上传失败」
+      max-file-size: 20MB
+      max-request-size: 50MB
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.0.114:5455/order?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: Silu.com
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    database: 1
+    timeout: 10000
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    serialization:
+      write-dates-as-timestamps: false
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.order.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+jwt:
+  secret: order-jwt-secret-key-2026-very-long-secret-key-for-qr-ordering
+  # 过期时间：100 年，等于永不过期
+  expiration: 3155760000000
+
+logging:
+  level:
+    com.order: debug
+    org.springframework: info
+
+file:
+  # 图片访问基础地址：与后端服务同端口，配合 WebConfig 的 /file/** 静态映射
+  base-server: http://localhost:8082/file
+  base-path: D:\\soft\\apache-tomcat-8.5.63\\webapps\\order_file
+
+# ==================== 微信小程序配置 ====================
+wechat:
+  miniapp:
+    app-id: ""
+    secret: ""
+    mock: true

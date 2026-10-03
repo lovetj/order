@@ -1,0 +1,59 @@
+<view class="page">
+  <view class="tabs">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab {{activeTab === item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="switchTab"
+    >
+      <text>{{item.label}}</text>
+      <text wx:if="{{counts[item.key] > 0}}" class="count">{{counts[item.key]}}</text>
+    </view>
+  </view>
+
+  <block wx:if="{{list.length > 0}}">
+    <view class="card order-card" wx:for="{{list}}" wx:key="id">
+      <view class="order-head">
+        <view>
+          <text class="table-no">{{item.table}} 桌</text>
+          <text class="order-id">单号 {{item.id}}</text>
+        </view>
+        <text class="order-status status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+
+      <view class="order-body">
+        <view class="order-item" wx:for="{{item.items}}" wx:for-item="goods" wx:key="name">
+          <text class="item-name">{{goods.name}}</text>
+          <text class="item-num text-sub">x{{goods.count}}</text>
+          <text class="item-price">¥{{goods.amount}}</text>
+        </view>
+      </view>
+
+      <view class="order-remark" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
+
+      <view class="order-foot">
+        <text class="text-sub">{{item.createTime}}</text>
+        <text class="price">合计 ¥{{item.amount}}</text>
+      </view>
+
+      <view class="order-actions">
+        <view class="act-btn print" data-id="{{item.id}}" bindtap="printReceipt">打印小票</view>
+        <block wx:if="{{item.action}}">
+          <view class="act-btn ghost" data-id="{{item.id}}" bindtap="rejectOrder">拒单</view>
+          <view
+            class="act-btn primary"
+            data-id="{{item.id}}"
+            data-next="{{item.action.next}}"
+            bindtap="handleNext"
+          >{{item.action.text}}</view>
+        </block>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="empty">
+    <view class="empty-icon">📭</view>
+    <view>暂无相关订单</view>
+  </view>
+</view>

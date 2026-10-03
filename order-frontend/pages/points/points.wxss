@@ -1,0 +1,132 @@
+.page {
+  padding-bottom: 60rpx;
+}
+
+.points-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 50rpx 40rpx 70rpx;
+  background: linear-gradient(135deg, #d4a24a, #b8860b);
+  color: #fff;
+}
+
+.points-label {
+  font-size: 26rpx;
+  opacity: 0.9;
+}
+
+.points-value {
+  font-size: 72rpx;
+  font-weight: 700;
+  margin-top: 8rpx;
+}
+
+.points-right {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 18rpx 28rpx;
+  border-radius: 999rpx;
+}
+
+.record-icon {
+  font-size: 36rpx;
+  display: block;
+}
+
+.record-text {
+  font-size: 22rpx;
+  display: block;
+  margin-top: 6rpx;
+}
+
+.tip {
+  margin: -40rpx 24rpx 0;
+  padding: 24rpx 28rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #8a8a8a;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.goods-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 24rpx;
+}
+
+.goods-item {
+  width: 48.5%;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.goods-thumb {
+  height: 180rpx;
+  border-radius: 16rpx;
+  background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 90rpx;
+  overflow: hidden;
+}
+
+.goods-thumb-img {
+  width: 100%;
+  height: 100%;
+}
+
+.goods-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-top: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goods-desc {
+  font-size: 22rpx;
+  color: #8a8a8a;
+  margin-top: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goods-stock {
+  font-size: 22rpx;
+  color: #a0a0a0;
+  margin-top: 8rpx;
+}
+
+.goods-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+}
+
+.goods-points {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #d4a24a;
+}
+
+.exchange-btn {
+  padding: 12rpx 28rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #d4a24a, #b8860b);
+  color: #fff;
+  font-size: 25rpx;
+}
+
+.exchange-btn.disabled {
+  background: #d8d8d8;
+}

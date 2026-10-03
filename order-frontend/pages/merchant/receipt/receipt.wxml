@@ -1,0 +1,55 @@
+<view class="page">
+  <!-- 小票预览 -->
+  <view class="receipt-paper">
+    <view class="r-shop">{{receipt.shopName}}</view>
+    <view wx:if="{{receipt.shopPhone}}" class="r-line">电话：{{receipt.shopPhone}}</view>
+    <view wx:if="{{receipt.shopAddress}}" class="r-line">{{receipt.shopAddress}}</view>
+
+    <view class="r-dash"></view>
+
+    <view class="r-row">
+      <text class="r-label">取餐号</text>
+      <text class="r-pick">{{receipt.pickNo}}</text>
+    </view>
+    <view class="r-row"><text class="r-label">订单号</text><text>{{receipt.orderNo}}</text></view>
+    <view class="r-row"><text class="r-label">桌号</text><text>{{receipt.tableNo}}</text></view>
+    <view class="r-row" wx:if="{{receipt.peopleCount}}">
+      <text class="r-label">人数</text><text>{{receipt.peopleCount}} 人</text>
+    </view>
+    <view class="r-row"><text class="r-label">下单时间</text><text>{{receipt.createTime}}</text></view>
+
+    <view class="r-dash"></view>
+
+    <view class="r-item-head">
+      <text class="col-name">品名</text>
+      <text class="col-qty">数量</text>
+      <text class="col-amt">金额</text>
+    </view>
+    <view class="r-item" wx:for="{{receipt.items}}" wx:key="name">
+      <text class="col-name">{{item.name}}</text>
+      <text class="col-qty">{{item.quantity}}</text>
+      <text class="col-amt">¥{{item.amount}}</text>
+    </view>
+
+    <view class="r-dash"></view>
+
+    <view class="r-row"><text class="r-label">小计</text><text>¥{{receipt.productTotal}}</text></view>
+    <view class="r-row" wx:if="{{receipt.discountAmount > 0}}">
+      <text class="r-label">优惠</text><text class="r-discount">-¥{{receipt.discountAmount}}</text>
+    </view>
+    <view class="r-row r-total">
+      <text class="r-label">应付</text><text>¥{{receipt.payAmount}}</text>
+    </view>
+
+    <view wx:if="{{receipt.remark}}" class="r-line r-remark">备注：{{receipt.remark}}</view>
+
+    <view class="r-dash"></view>
+    <view class="r-footer">谢谢惠顾，欢迎再次光临！</view>
+  </view>
+
+  <!-- 操作 -->
+  <view class="ops">
+    <view class="op-btn primary" bindtap="print">🖨 打印小票</view>
+    <view class="op-btn" bindtap="copyText">📋 复制内容</view>
+  </view>
+</view>

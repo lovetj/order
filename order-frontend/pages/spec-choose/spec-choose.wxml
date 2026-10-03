@@ -1,0 +1,60 @@
+<view class="page">
+  <!-- 菜品信息 -->
+  <view class="dish-head">
+    <view class="dish-thumb">
+      <image wx:if="{{dish.imageUrl}}" class="dish-thumb-img" src="{{dish.image}}" mode="aspectFill"></image>
+      <text wx:else>{{dish.image}}</text>
+    </view>
+    <view class="dish-info">
+      <view class="dish-name">{{dish.name}}</view>
+      <view class="dish-desc">{{dish.desc}}</view>
+      <view class="dish-price">¥{{dish.price}}</view>
+    </view>
+  </view>
+
+  <!-- 规格分组 -->
+  <view class="spec-group" wx:for="{{specGroups}}" wx:key="groupName" wx:for-item="group">
+    <view class="group-head">
+      <text class="group-name">{{group.groupName}}</text>
+      <text class="group-type">{{group.selectType === 2 ? '可多选' : '单选'}}</text>
+      <text wx:if="{{group.required === 1}}" class="group-required">必选</text>
+    </view>
+    <view class="option-list">
+      <view
+        wx:for="{{group.options}}"
+        wx:key="id"
+        wx:for-item="opt"
+        wx:for-index="oi"
+        class="option {{opt.selected ? 'active' : ''}}"
+        data-gi="{{index}}"
+        data-oi="{{oi}}"
+        data-type="{{group.selectType}}"
+        bindtap="toggleOption"
+      >
+        <text class="option-name">{{opt.name}}</text>
+        <text wx:if="{{opt.extraPrice > 0}}" class="option-price">+{{opt.extraPrice}}元</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{specGroups.length === 0}}" class="empty">该菜品暂无可选规格，可直接加入</view>
+
+  <view class="bottom-space"></view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="qty-wrap">
+      <text class="qty-label">数量</text>
+      <view class="stepper">
+        <view class="step-btn minus" data-delta="-1" bindtap="changeQty">−</view>
+        <text class="step-num">{{quantity}}</text>
+        <view class="step-btn plus" data-delta="1" bindtap="changeQty">+</view>
+      </view>
+    </view>
+    <view class="total-wrap">
+      <text class="total-label">合计</text>
+      <text class="total-price">¥{{totalPrice}}</text>
+    </view>
+    <view class="confirm-btn" bindtap="confirm">加入购物车</view>
+  </view>
+</view>

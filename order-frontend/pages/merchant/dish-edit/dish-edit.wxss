@@ -1,0 +1,259 @@
+.page {
+  padding-bottom: 60rpx;
+}
+
+.label {
+  font-size: 28rpx;
+  color: #333;
+  min-width: 160rpx;
+}
+
+.preview {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 20rpx;
+  background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 110rpx;
+  margin: 20rpx auto;
+}
+
+.img-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.preview-img {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 20rpx;
+  margin: 20rpx auto;
+  background: #f7f7f7;
+}
+
+.img-ops {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 12rpx;
+}
+
+.img-btn {
+  padding: 14rpx 36rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  border: 2rpx solid #2f80ed;
+  color: #2f80ed;
+}
+
+.img-btn.primary {
+  background: #2f80ed;
+  color: #fff;
+}
+
+.emoji-title {
+  font-size: 24rpx;
+  color: #8a8a8a;
+  text-align: center;
+  margin: 28rpx 0 16rpx;
+}
+
+.emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  justify-content: center;
+}
+
+.emoji-cell {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 16rpx;
+  background: #f5f6f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  border: 2rpx solid transparent;
+}
+
+.emoji-cell.active {
+  border-color: #2f80ed;
+  background: #eaf3ff;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+.picker {
+  flex: 1;
+}
+
+.picker-value {
+  text-align: right;
+  font-size: 28rpx;
+  color: #2f80ed;
+}
+
+.arrow {
+  color: #c8c8c8;
+  margin-left: 8rpx;
+}
+
+.input {
+  flex: 1;
+  text-align: right;
+  font-size: 28rpx;
+}
+
+.btn-wrap {
+  padding: 40rpx 24rpx;
+}
+
+/* 规格配置 */
+.spec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.spec-add {
+  font-size: 26rpx;
+  color: #2f80ed;
+}
+
+.spec-group {
+  border: 1rpx solid #eef0f3;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  background: #fafbfc;
+}
+
+.spec-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18rpx;
+}
+
+.spec-group-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.spec-tags {
+  display: flex;
+  align-items: center;
+}
+
+.spec-tag {
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: #eef0f3;
+  color: #666;
+  margin-left: 12rpx;
+}
+
+.spec-tag.on {
+  background: #eaf3ff;
+  color: #2f80ed;
+}
+
+.spec-del {
+  font-size: 22rpx;
+  color: #ff3b30;
+  margin-left: 16rpx;
+}
+
+.spec-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.spec-option {
+  position: relative;
+  padding: 14rpx 22rpx;
+  border-radius: 12rpx;
+  background: #fff;
+  border: 2rpx solid #e8eaee;
+  font-size: 25rpx;
+  display: flex;
+  align-items: center;
+}
+
+.spec-option.default {
+  border-color: #2f80ed;
+  background: #eaf3ff;
+}
+
+.spec-option.add {
+  color: #2f80ed;
+  border-style: dashed;
+}
+
+.opt-name {
+  color: #333;
+}
+
+.opt-price {
+  color: #ff6b35;
+  font-size: 22rpx;
+  margin-left: 8rpx;
+}
+
+.opt-default {
+  color: #2f80ed;
+  font-size: 20rpx;
+  margin-left: 8rpx;
+}
+
+.opt-del {
+  color: #bbb;
+  font-size: 30rpx;
+  margin-left: 12rpx;
+  padding: 0 6rpx;
+}
+
+.spec-empty {
+  font-size: 24rpx;
+  color: #a0a0a0;
+  text-align: center;
+  padding: 20rpx 0;
+}
+
+.submit-btn {
+  height: 92rpx;
+  line-height: 92rpx;
+  text-align: center;
+  font-size: 32rpx;
+}
+
+.submit-btn.disabled {
+  opacity: 0.6;
+}
+
+.delete-btn {
+  margin-top: 28rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  color: #ff3b30;
+  font-size: 30rpx;
+  background: #fff;
+  border: 2rpx solid #ffd6d2;
+}

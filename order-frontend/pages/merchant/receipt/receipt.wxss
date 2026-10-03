@@ -1,0 +1,131 @@
+.page {
+  padding: 32rpx 24rpx 200rpx;
+}
+
+.receipt-paper {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 40rpx 32rpx;
+  font-size: 26rpx;
+  color: #1f1f1f;
+  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.08);
+  font-family: "Courier New", Consolas, monospace;
+}
+
+.r-shop {
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-bottom: 12rpx;
+}
+
+.r-line {
+  text-align: center;
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 6rpx;
+}
+
+.r-dash {
+  border-top: 2rpx dashed #ddd;
+  margin: 24rpx 0;
+}
+
+.r-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8rpx 0;
+  font-size: 26rpx;
+}
+
+.r-label {
+  color: #666;
+}
+
+.r-pick {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #2f80ed;
+}
+
+.r-item-head {
+  display: flex;
+  padding: 8rpx 0;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.r-item {
+  display: flex;
+  padding: 10rpx 0;
+  font-size: 26rpx;
+}
+
+.col-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-qty {
+  width: 100rpx;
+  text-align: center;
+}
+
+.col-amt {
+  width: 160rpx;
+  text-align: right;
+}
+
+.r-discount {
+  color: #ff6b35;
+}
+
+.r-total {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.r-remark {
+  text-align: left;
+  color: #ff9500;
+  margin-top: 16rpx;
+}
+
+.r-footer {
+  text-align: center;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.ops {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 24rpx;
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.op-btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 29rpx;
+  border: 2rpx solid #2f80ed;
+  color: #2f80ed;
+  background: #fff;
+}
+
+.op-btn.primary {
+  background: linear-gradient(135deg, #4d95f5, #2f80ed);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}

@@ -1,0 +1,30 @@
+<view class="role-page">
+  <view class="hero">
+    <view class="logo">🍔</view>
+    <view class="title">扫码点餐</view>
+    <view class="subtitle">请选择你的身份进入</view>
+    <view wx:if="{{tableNo}}" class="table-tag">当前桌号：{{tableNo}}</view>
+  </view>
+
+  <view class="role-list">
+    <view class="role-card customer" data-role="customer" bindtap="chooseRole">
+      <view class="role-icon">🙋</view>
+      <view class="role-info">
+        <view class="role-name">我是顾客</view>
+        <view class="role-desc">浏览菜单 · 在线点餐 · 查看订单</view>
+      </view>
+      <view class="arrow">›</view>
+    </view>
+
+    <view class="role-card merchant" data-role="merchant" bindtap="chooseRole">
+      <view class="role-icon">🏪</view>
+      <view class="role-info">
+        <view class="role-name">我是店家</view>
+        <view class="role-desc">管理后台 · 商品维护 · 处理订单</view>
+      </view>
+      <view class="arrow">›</view>
+    </view>
+  </view>
+
+  <view class="footer">进入后可在「我的」中切换身份</view>
+</view>

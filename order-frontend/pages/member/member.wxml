@@ -1,0 +1,76 @@
+<view class="page">
+  <!-- 会员卡 -->
+  <view class="member-card">
+    <view class="member-top">
+      <view class="avatar">{{member.avatar}}</view>
+      <view class="member-info">
+        <view class="nick">{{member.nickName}}</view>
+        <view class="level-tag">{{member.memberLevel}}</view>
+      </view>
+    </view>
+
+    <view class="progress-wrap">
+      <view class="progress-head">
+        <text class="progress-text">{{member.nextLevelName}}</text>
+        <text class="progress-need">
+          {{member.nextLevelNeed > 0 ? '还需消费 ¥' + member.nextLevelNeed : '已达最高等级'}}
+        </text>
+      </view>
+      <view class="progress-bar-bg">
+        <view class="progress-bar" style="width: {{member.progress}}%;"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 积分与统计 -->
+  <view class="stat-card">
+    <view class="stat-item" bindtap="goPointsMall">
+      <view class="stat-value">{{member.points}}</view>
+      <view class="stat-label">积分</view>
+    </view>
+    <view class="stat-item" bindtap="goCoupon">
+      <view class="stat-value">{{member.couponCount}}</view>
+      <view class="stat-label">优惠券</view>
+    </view>
+    <view class="stat-item" bindtap="goOrders">
+      <view class="stat-value">{{member.orderCount}}</view>
+      <view class="stat-label">累计订单</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value">¥{{member.totalConsume}}</view>
+      <view class="stat-label">累计消费</view>
+    </view>
+  </view>
+
+  <!-- 积分说明 -->
+  <view class="card rules">
+    <view class="section-title">会员权益</view>
+    <view class="rule-item"><text class="dot">·</text>每消费 1 元获得 1 积分</view>
+    <view class="rule-item"><text class="dot">·</text>100 积分可抵扣 1 元</view>
+    <view class="rule-item"><text class="dot">·</text>累计消费 500 / 2000 / 5000 元升级白银 / 黄金 / 钻石会员</view>
+    <view class="rule-item"><text class="dot">·</text>会员等级越高，可领取的专属优惠券越多</view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="card entry-card" bindtap="goPointsMall">
+    <view class="entry-left">
+      <text class="entry-icon">🎁</text>
+      <text class="entry-text">积分商城</text>
+    </view>
+    <text class="arrow">›</text>
+  </view>
+  <view class="card entry-card" bindtap="goCouponCenter">
+    <view class="entry-left">
+      <text class="entry-icon">🎫</text>
+      <text class="entry-text">领券中心</text>
+    </view>
+    <text class="arrow">›</text>
+  </view>
+  <view class="card entry-card" bindtap="goCoupon">
+    <view class="entry-left">
+      <text class="entry-icon">📋</text>
+      <text class="entry-text">我的优惠券</text>
+    </view>
+    <text class="arrow">›</text>
+  </view>
+</view>

@@ -1,0 +1,54 @@
+{
+  "pages": [
+    "pages/role/role",
+    "pages/login/login",
+    "pages/index/index",
+    "pages/menu/menu",
+    "pages/order/order",
+    "pages/mine/mine",
+    "pages/member/member",
+    "pages/coupon/coupon",
+    "pages/coupon-center/coupon-center",
+    "pages/points/points",
+    "pages/points-record/points-record",
+    "pages/spec-choose/spec-choose",
+    "pages/merchant/dashboard/dashboard",
+    "pages/merchant/goods/goods",
+    "pages/merchant/dish-edit/dish-edit",
+    "pages/merchant/category/category",
+    "pages/merchant/orders/orders",
+    "pages/merchant/receipt/receipt",
+    "pages/merchant/tables/tables",
+    "pages/merchant/report/report",
+    "pages/merchant/coupon/coupon",
+    "pages/merchant/points-goods/points-goods",
+    "pages/merchant/mine/mine",
+    "pages/merchant/shop-info/shop-info"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "扫码点餐",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f6f8"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8a8a8a",
+    "selectedColor": "#ff6b35",
+    "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/menu/menu", "text": "点餐" },
+      { "pagePath": "pages/order/order", "text": "订单" },
+      { "pagePath": "pages/mine/mine", "text": "我的" },
+      { "pagePath": "pages/merchant/dashboard/dashboard", "text": "管理后台" },
+      { "pagePath": "pages/merchant/goods/goods", "text": "商品" },
+      { "pagePath": "pages/merchant/orders/orders", "text": "订单管理" },
+      { "pagePath": "pages/merchant/mine/mine", "text": "我的店铺" }
+    ]
+  },
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

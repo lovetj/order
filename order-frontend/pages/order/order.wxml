@@ -1,0 +1,45 @@
+<!--pages/order/order.wxml-->
+<view class="container">
+  <view class="tabs">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab {{current === item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="switchTab"
+    >{{item.name}}</view>
+  </view>
+
+  <view wx:if="{{list.length === 0}}" class="empty">
+    <view class="empty-icon">📭</view>
+    <view class="empty-text">暂无订单</view>
+    <view class="empty-btn" bindtap="goMenu">去点餐</view>
+  </view>
+
+  <view class="order-card" wx:for="{{list}}" wx:key="id">
+    <view class="order-head" data-id="{{item.id}}" bindtap="showDetail">
+      <view class="order-table">桌号 {{item.table}}</view>
+      <view class="order-status status-{{item.status}}">{{item.statusText}}</view>
+    </view>
+    <view class="order-items" data-id="{{item.id}}" bindtap="showDetail">
+      <view class="order-item" wx:for="{{item.items}}" wx:for-item="g" wx:key="name">
+        <view class="item-name">{{g.name}}</view>
+        <view class="item-count">x{{g.count}}</view>
+        <view class="item-price">¥{{g.price}}</view>
+      </view>
+    </view>
+    <view class="order-foot">
+      <view class="order-time">{{item.createTime}}</view>
+      <view class="order-total">合计 <text class="price">¥{{item.amount}}</text></view>
+    </view>
+    <view class="order-actions">
+      <view
+        wx:if="{{item.status === 'pending' || item.status === 'cooking'}}"
+        class="act-btn"
+        data-id="{{item.id}}"
+        bindtap="cancelOrder"
+      >取消订单</view>
+      <view class="act-btn primary" data-id="{{item.id}}" bindtap="showDetail">订单详情</view>
+    </view>
+  </view>
+</view>

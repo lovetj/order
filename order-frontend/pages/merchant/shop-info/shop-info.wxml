@@ -1,0 +1,82 @@
+<view class="page">
+  <!-- 店铺 Logo -->
+  <view class="card">
+    <view class="card-title"><text class="required">*</text>店铺 Logo</view>
+    <view class="logo-wrap">
+      <view class="logo-item">
+        <view class="logo-box" bindtap="onLogoTap">
+          <image wx:if="{{logoUrl}}" class="logo-img" src="{{logoUrl}}" mode="aspectFill" />
+          <text wx:else class="logo-placeholder">＋</text>
+        </view>
+        <view wx:if="{{logoUrl}}" class="logo-del" catchtap="removeLogo">×</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 店铺图片（多图） -->
+  <view class="card">
+    <view class="card-title"><text class="required">*</text>店铺图片<text class="card-sub">（最多 9 张，单张不超过 10MB）</text></view>
+    <view class="image-grid">
+      <view
+        class="image-item"
+        wx:for="{{imageUrls}}"
+        wx:key="index"
+      >
+        <image class="image-thumb" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" />
+        <view class="image-del" data-index="{{index}}" catchtap="removeImage">×</view>
+      </view>
+      <view wx:if="{{imageUrls.length < 9}}" class="image-add" bindtap="chooseImages">
+        <text class="add-icon">＋</text>
+        <text class="add-text">上传图片</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 基础信息 -->
+  <view class="card">
+    <view class="card-title">基础信息</view>
+    <view class="field">
+      <text class="label"><text class="required">*</text>店铺名称</text>
+      <input class="input" value="{{form.name}}" placeholder="请输入店铺名称" data-field="name" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="label"><text class="required">*</text>真实姓名</text>
+      <input class="input" value="{{form.realName}}" placeholder="请输入店家真实姓名" data-field="realName" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="label"><text class="required">*</text>联系电话</text>
+      <input class="input" type="number" value="{{form.phone}}" placeholder="请输入联系电话" data-field="phone" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="label"><text class="required">*</text>店铺地址</text>
+      <input class="input" value="{{form.address}}" placeholder="请输入或点击右侧定位" data-field="address" bindinput="onInput" />
+      <view class="loc-btn" catchtap="onChooseLocation">定位</view>
+    </view>
+    <view class="map-preview-wrap" wx:if="{{form.latitude && form.longitude}}">
+      <map
+        class="map-preview"
+        latitude="{{form.latitude}}"
+        longitude="{{form.longitude}}"
+        markers="{{mapMarkers}}"
+        scale="16"
+        enable-zoom="false"
+        enable-scroll="false"
+      ></map>
+    </view>
+    <view class="field">
+      <text class="label">宣传语</text>
+      <input class="input" value="{{form.slogan}}" placeholder="如：现点现做 · 用心出餐" data-field="slogan" bindinput="onInput" />
+    </view>
+    <view class="field column">
+      <text class="label">店内公告</text>
+      <textarea class="textarea" value="{{form.notice}}" placeholder="多条公告可用 | 分隔，如：营业时间 10:00-22:00" maxlength="500" data-field="notice" bindinput="onInput" />
+    </view>
+  </view>
+
+  <!-- 底部漂浮操作栏 -->
+  <view class="action-bar">
+    <view wx:if="{{hasUnsaved}}" class="unsaved-tip">有未保存的修改</view>
+    <button class="cancel-btn" disabled="{{saving}}" bindtap="cancel">取消</button>
+    <button class="save-btn {{hasUnsaved ? 'save-btn-active' : ''}}" loading="{{saving}}" disabled="{{saving || uploading}}" bindtap="save">保存</button>
+  </view>
+</view>
