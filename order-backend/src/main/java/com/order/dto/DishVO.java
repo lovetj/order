@@ -18,6 +18,8 @@ public class DishVO {
     /** 前端使用 desc 字段 */
     private String desc;
     private BigDecimal price;
+    /** 起购份数，1 表示一份起购 */
+    private Integer minBuy;
     private Integer sales;
     private String image;
     /** 前端 status 为布尔值：true 上架 / false 下架 */

@@ -1,6 +1,7 @@
 // pages/menu/menu.js —— 顾客端点餐
 const app = getApp()
 const api = require('../../utils/api')
+const { formatImageUrl } = require('../../utils/util')
 
 Page({
   data: {
@@ -34,13 +35,23 @@ Page({
     }
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    if (!this.data.categories.length) {
+      this.loadData()
+    } else {
+      this.loadGoods()
+    }
+  },
+
   // 加载分类 + 全部菜品 + 规格标记
   loadData() {
     Promise.all([api.getCategories(), api.getDishes({ categoryId: 'all' })]).then(([categories, goods]) => {
       const firstId = categories && categories.length ? categories[0].id : 'all'
       this.setData({
         categories: categories || [],
-        goods: (goods || []).map((g) => ({ ...g, imageUrl: /^https?:\/\//.test(g.image || '') })),
+        goods: (goods || []).map((g) => this.decorateImage(g)),
         currentCategory: firstId
       }, () => {
         this.buildList()
@@ -62,11 +73,21 @@ Page({
     this.setData({ dishHasSpec: {} })
   },
 
+  /**
+   * 统一处理菜品图片：数据库存相对路径（历史数据可能是完整 URL），
+   * hasImage 标记是否为真实图片，imageUrl 为拼好的完整展示地址。
+   */
+  decorateImage(g) {
+    const img = (g && g.image) || ''
+    const hasImage = /^https?:\/\//.test(img) || img.startsWith('/')
+    return { ...g, hasImage, imageUrl: hasImage ? formatImageUrl(img) : '' }
+  },
+
   // 仅刷新菜品（保留分类与购物车）
   loadGoods() {
     api.getDishes({ categoryId: 'all' }).then((goods) => {
       this.setData({
-        goods: (goods || []).map((g) => ({ ...g, imageUrl: /^https?:\/\//.test(g.image || '') }))
+        goods: (goods || []).map((g) => this.decorateImage(g))
       }, () => this.buildList())
     }).catch(() => {})
   },
@@ -90,8 +111,7 @@ Page({
     this.setData({
       goodsList: list.map((g) => ({
         ...g,
-        count: countByDish[g.id] || 0,
-        imageUrl: /^https?:\/\//.test(g.image || '')
+        count: countByDish[g.id] || 0
       }))
     })
   },
@@ -103,6 +123,7 @@ Page({
   /**
    * 点击 + ：跳转规格选择页
    * 规格页会拉取菜品规格；若无规格，返回时直接加入购物车
+   * 注：起购份数(minBuy) 由规格页的步进器保证首次加入时不少于 minBuy
    */
   addItem(e) {
     const id = e.currentTarget.dataset.id
@@ -137,6 +158,7 @@ Page({
         name: dish.name,
         price: unitPrice,
         image: dish.image,
+        hasImage: dish.hasImage,
         imageUrl: dish.imageUrl,
         specIds: specIds || [],
         specText: specText || '',

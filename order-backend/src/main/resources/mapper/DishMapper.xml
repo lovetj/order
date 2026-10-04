@@ -10,6 +10,7 @@
         <result property="description" column="description"/>
         <result property="image" column="image"/>
         <result property="price" column="price"/>
+        <result property="minBuy" column="min_buy"/>
         <result property="stock" column="stock"/>
         <result property="sales" column="sales"/>
         <result property="isHot" column="is_hot"/>

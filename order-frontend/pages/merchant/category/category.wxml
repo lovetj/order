@@ -11,12 +11,41 @@
       <view class="cat-status {{item.status === 1 ? 'on' : 'off'}}" data-id="{{item.id}}" catchtap="toggleStatus">
         {{item.status === 1 ? '启用' : '禁用'}}
       </view>
-      <view class="cat-op up" data-id="{{item.id}}" catchtap="moveUp">↑</view>
+      <view
+        class="cat-op up {{index === 0 ? 'disabled' : ''}}"
+        data-id="{{item.id}}"
+        catchtap="moveUp"
+      >↑</view>
+      <view
+        class="cat-op down {{index === list.length - 1 ? 'disabled' : ''}}"
+        data-id="{{item.id}}"
+        catchtap="moveDown"
+      >↓</view>
       <view class="cat-op del" data-id="{{item.id}}" catchtap="deleteCategory">删除</view>
     </view>
   </view>
 
   <view wx:if="{{list.length === 0}}" class="empty">暂无分类，点击右下角新增</view>
 
-  <view class="fab" bindtap="addCategory">＋</view>
+  <view class="fab" bindtap="openAdd">＋</view>
+
+  <!-- 自定义输入弹窗：新增 / 编辑分类（避免 showModal editable 残留上次内容） -->
+  <view class="dialog-mask" wx:if="{{dialogVisible}}" catchtouchmove="true" bindtap="closeDialog">
+    <view class="dialog" catchtap="noop">
+      <view class="dialog-title">{{dialogMode === 'edit' ? '修改分类名称' : '新增分类'}}</view>
+      <input
+        class="dialog-input"
+        value="{{dialogValue}}"
+        placeholder="{{dialogMode === 'edit' ? '请输入新的分类名称' : '请输入分类名称，如：凉菜'}}"
+        focus="{{dialogFocus}}"
+        maxlength="20"
+        bindinput="onDialogInput"
+        bindconfirm="confirmDialog"
+      />
+      <view class="dialog-actions">
+        <view class="dialog-btn cancel" bindtap="closeDialog">取消</view>
+        <view class="dialog-btn confirm" bindtap="confirmDialog">确定</view>
+      </view>
+    </view>
+  </view>
 </view>

@@ -1,6 +1,7 @@
 // pages/index/index.js —— 顾客端首页
 const app = getApp()
 const api = require('../../utils/api')
+const { formatImageUrl } = require('../../utils/util')
 
 Page({
   data: {
@@ -38,6 +39,14 @@ Page({
     this.loadRecommend()
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    this.setData({ tableNo: app.globalData.tableNo || '未获取' })
+    this.loadShop()
+    this.loadRecommend()
+  },
+
   // 加载门店信息
   loadShop() {
     api.getShopInfo().then((shop) => {
@@ -61,10 +70,11 @@ Page({
   // 加载店长推荐
   loadRecommend() {
     api.getRecommend(4).then((list) => {
-      const recommend = (list || []).map((g) => ({
-        ...g,
-        imageUrl: /^https?:\/\//.test(g.image || '')
-      }))
+      const recommend = (list || []).map((g) => {
+        const img = g.image || ''
+        const hasImage = /^https?:\/\//.test(img) || img.startsWith('/')
+        return { ...g, hasImage, imageUrl: hasImage ? formatImageUrl(img) : '' }
+      })
       this.setData({ recommend })
     }).catch(() => {})
   },

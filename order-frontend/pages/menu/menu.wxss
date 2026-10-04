@@ -143,6 +143,18 @@
   font-size: 30rpx;
 }
 
+.min-buy-tag {
+  height: 52rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .bottom-space {
   height: 30rpx;
 }

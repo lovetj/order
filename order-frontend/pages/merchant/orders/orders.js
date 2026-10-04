@@ -34,6 +34,13 @@ Page({
     this.loadList()
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    this.loadCounts()
+    this.loadList()
+  },
+
   // 各状态数量（Tab 角标）
   loadCounts() {
     api.getAdminOrderCounts().then((counts) => {
@@ -94,6 +101,13 @@ Page({
 
   // 操作后刷新列表与角标
   afterAction() {
+    this.loadCounts()
+    this.loadList()
+  },
+
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
     this.loadCounts()
     this.loadList()
   },

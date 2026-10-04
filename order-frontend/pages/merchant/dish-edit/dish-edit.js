@@ -2,6 +2,7 @@
 const api = require('../../../utils/api')
 const { baseUrl } = require('../../../utils/config')
 const { getToken } = require('../../../utils/request')
+const { formatImageUrl, toRelativePath } = require('../../../utils/util')
 
 // 常用 emoji 作为图片兜底（未上传图片时使用）
 const EMOJIS = ['🍽️', '🥘', '🍗', '🐟', '🍚', '🥟', '🍜', '🍲', '🥣', '🧃', '🥤', '🍟', '🍖', '🥗', '🍤', '🍱']
@@ -15,6 +16,8 @@ Page({
     emojis: EMOJIS,
     // 是否为真实图片 URL（而非 emoji）
     isImageUrl: false,
+    // 图片完整展示地址（form.image 存相对路径，此处存拼好的完整地址用于渲染）
+    imageUrl: '',
     // 规格分组：[{ groupName, selectType, required, options:[{id,name,extraPrice,isDefault}] }]
     specGroups: [],
     form: {
@@ -23,13 +26,20 @@ Page({
       description: '',
       image: '🍽️',
       price: '',
+      minBuy: '1',
       stock: '999',
       isHot: 0,
       status: 1,
       sort: 0
     },
     submitting: false,
-    uploading: false
+    deleting: false,
+    uploading: false,
+    // 当前激活的选项（显示左右移动按钮）
+    activeGi: -1,
+    activeOi: -1,
+    // 当前激活的分组（显示左右移动按钮）
+    activeGroupGi: -1
   },
 
   // 选择并上传图片
@@ -60,8 +70,15 @@ Page({
         try {
           const body = JSON.parse(res.data)
           if (body.code === 200 && body.data && body.data.url) {
+            // 数据库只存相对路径（不拼 baseUrl），展示时再拼完整地址
+            const relativePath = toRelativePath(body.data.url, body.data.relativePath)
+            if (!relativePath) {
+              wx.showToast({ title: '上传结果异常：未获取到路径', icon: 'none' })
+              return
+            }
             this.setData({
-              'form.image': body.data.url,
+              'form.image': relativePath,
+              imageUrl: formatImageUrl(relativePath),
               isImageUrl: true
             })
             wx.showToast({ title: '上传成功', icon: 'success' })
@@ -82,12 +99,12 @@ Page({
 
   // 移除图片，回退到 emoji
   removeImage() {
-    this.setData({ 'form.image': '🍽️', isImageUrl: false })
+    this.setData({ 'form.image': '🍽️', imageUrl: '', isImageUrl: false })
   },
 
   previewImage() {
-    if (!this.data.isImageUrl || !this.data.form.image) return
-    wx.previewImage({ urls: [this.data.form.image] })
+    if (!this.data.isImageUrl || !this.data.imageUrl) return
+    wx.previewImage({ urls: [this.data.imageUrl] })
   },
 
   onLoad(options) {
@@ -115,16 +132,19 @@ Page({
       if (!dish) return
       const index = this.data.categories.findIndex((c) => c.id === dish.categoryId)
       const image = dish.image || '🍽️'
+      // 图片路径形如 /dish/xxx.jpg（或以 http 开头的历史数据），其余视为 emoji
+      const isImageUrl = /^https?:\/\//.test(image) || image.startsWith('/')
       this.setData({
         categoryIndex: index < 0 ? 0 : index,
-        // 图片为 http 开头说明是真实图片 URL
-        isImageUrl: /^https?:\/\//.test(image),
+        isImageUrl,
+        imageUrl: isImageUrl ? formatImageUrl(image) : '',
         form: {
           categoryId: dish.categoryId,
           name: dish.name || '',
           description: dish.desc || '',
           image,
           price: dish.price != null ? String(dish.price) : '',
+          minBuy: dish.minBuy != null && dish.minBuy > 0 ? String(dish.minBuy) : '1',
           stock: dish.stock != null ? String(dish.stock) : '999',
           isHot: dish.isHot || 0,
           status: dish.status ? 1 : 0,
@@ -165,6 +185,7 @@ Page({
   chooseEmoji(e) {
     this.setData({
       'form.image': e.currentTarget.dataset.emoji,
+      imageUrl: '',
       isImageUrl: false
     })
   },
@@ -211,12 +232,25 @@ Page({
     })
   },
 
-  // 删除规格分组
+  // 删除规格分组（带确认提示）
   removeSpecGroup(e) {
-    const { gi } = e.currentTarget.dataset
-    const specGroups = [...this.data.specGroups]
-    specGroups.splice(gi, 1)
-    this.setData({ specGroups })
+    const gi = Number(e.currentTarget.dataset.gi)
+    const group = this.data.specGroups[gi]
+    if (!group) return
+    wx.showModal({
+      title: '删除确认',
+      content: `确定删除分组「${group.groupName}」及其全部选项吗？`,
+      confirmText: '删除',
+      confirmColor: '#ff3b30',
+      success: (res) => {
+        if (!res.confirm) return
+        const specGroups = [...this.data.specGroups]
+        specGroups.splice(gi, 1)
+        // 分组被删除，重置激活态
+        this.setData({ specGroups, activeGi: -1, activeOi: -1, activeGroupGi: -1 })
+        wx.showToast({ title: '已删除', icon: 'none' })
+      }
+    })
   },
 
   // 切换分组选择类型：单选 / 多选
@@ -274,18 +308,52 @@ Page({
     })
   },
 
-  // 删除选项
+  // 删除选项（带确认提示）
   removeSpecOption(e) {
     const { gi, oi } = e.currentTarget.dataset
-    const specGroups = [...this.data.specGroups]
-    specGroups[gi].options.splice(oi, 1)
-    this.setData({ specGroups })
+    const option = this.data.specGroups[gi].options[oi]
+    wx.showModal({
+      title: '删除确认',
+      content: `确定删除选项「${option.name}」吗？`,
+      confirmText: '删除',
+      confirmColor: '#ff3b30',
+      success: (res) => {
+        if (!res.confirm) return
+        const specGroups = this.data.specGroups.map((g) => ({
+          ...g,
+          options: [...g.options]
+        }))
+        specGroups[gi].options.splice(oi, 1)
+        // 选项被删除，重置激活态，避免移动按钮残留
+        this.setData({ specGroups, activeGi: -1, activeOi: -1 })
+        wx.showToast({ title: '已删除', icon: 'none' })
+      }
+    })
   },
 
-  // 设置选项为默认选中
-  setDefaultOption(e) {
-    const { gi, oi } = e.currentTarget.dataset
-    const specGroups = [...this.data.specGroups]
+  // ==================== 选项排序（左右移动按钮） ====================
+
+  /**
+   * 点击选项：
+   *  - 第一次点击：仅激活该项（左右显示移动按钮），不改变默认状态
+   *  - 再次点击已激活项：切换其「默认」状态（单选互斥 / 多选可多选）
+   */
+  toggleOption(e) {
+    const gi = Number(e.currentTarget.dataset.gi)
+    const oi = Number(e.currentTarget.dataset.oi)
+    const isActive = this.data.activeGi === gi && this.data.activeOi === oi
+
+    // 未激活：仅激活，不切换默认
+    if (!isActive) {
+      this.setData({ activeGi: gi, activeOi: oi, activeGroupGi: -1 })
+      return
+    }
+
+    // 已激活：再次点击切换默认状态
+    const specGroups = this.data.specGroups.map((g) => ({
+      ...g,
+      options: [...g.options]
+    }))
     const group = specGroups[gi]
     group.options.forEach((o, idx) => {
       if (group.selectType === 1) {
@@ -297,6 +365,54 @@ Page({
       }
     })
     this.setData({ specGroups })
+  },
+
+  // 左移 / 右移选项（dir: -1 左移，1 右移）
+  moveOption(e) {
+    const gi = Number(e.currentTarget.dataset.gi)
+    const from = Number(e.currentTarget.dataset.oi)
+    const target = from + Number(e.currentTarget.dataset.dir)
+    const specGroups = this.data.specGroups.map((g) => ({
+      ...g,
+      options: [...g.options]
+    }))
+    const options = specGroups[gi].options
+    if (target < 0 || target >= options.length) return
+    const [moved] = options.splice(from, 1)
+    options.splice(target, 0, moved)
+    // 激活项跟随移动后的新位置
+    this.setData({ specGroups, activeGi: gi, activeOi: target })
+  },
+
+  // 取消激活（点击空白处收起所有移动按钮）
+  clearActive() {
+    if (this.data.activeGi === -1 && this.data.activeGroupGi === -1) return
+    this.setData({ activeGi: -1, activeOi: -1, activeGroupGi: -1 })
+  },
+
+  // 空操作：用于阻止子元素点击冒泡到根节点（避免误收起）
+  noop() {},
+
+  // ==================== 分组排序（左右移动按钮） ====================
+
+  // 点击分组名：激活该分组
+  toggleGroup(e) {
+    const gi = Number(e.currentTarget.dataset.gi)
+    const activeGroupGi = this.data.activeGroupGi === gi ? -1 : gi
+    this.setData({ activeGroupGi, activeGi: -1, activeOi: -1 })
+  },
+
+  // 左移 / 右移分组（dir: -1 左移，1 右移）
+  moveGroup(e) {
+    const { gi, dir } = e.currentTarget.dataset
+    const from = Number(gi)
+    const target = from + Number(dir)
+    const specGroups = [...this.data.specGroups]
+    if (target < 0 || target >= specGroups.length) return
+    const [moved] = specGroups.splice(from, 1)
+    specGroups.splice(target, 0, moved)
+    // 激活分组跟随移动到新位置
+    this.setData({ specGroups, activeGroupGi: target })
   },
 
   // 保存规格（新增菜品时需先保存菜品拿到 id）
@@ -326,13 +442,27 @@ Page({
       wx.showToast({ title: '请选择分类', icon: 'none' })
       return
     }
+    // 菜品图片必填：需为真实上传的图片（emoji 兜底不算）
+    if (!this.data.isImageUrl || !form.image || !form.image.startsWith('/')) {
+      wx.showToast({ title: '请上传菜品图片', icon: 'none' })
+      return
+    }
     if (!form.name || !form.name.trim()) {
       wx.showToast({ title: '请输入菜品名称', icon: 'none' })
+      return
+    }
+    if (!form.description || !form.description.trim()) {
+      wx.showToast({ title: '请输入菜品描述', icon: 'none' })
       return
     }
     const price = Number(form.price)
     if (!price || price <= 0) {
       wx.showToast({ title: '请输入有效价格', icon: 'none' })
+      return
+    }
+    const minBuy = form.minBuy === '' ? 1 : Number(form.minBuy)
+    if (isNaN(minBuy) || minBuy < 1 || !Number.isInteger(minBuy)) {
+      wx.showToast({ title: '起购份数需为不小于1的整数', icon: 'none' })
       return
     }
     const stock = form.stock === '' ? 999 : Number(form.stock)
@@ -344,9 +474,10 @@ Page({
     const payload = {
       categoryId: form.categoryId,
       name: form.name.trim(),
-      description: form.description,
+      description: form.description.trim(),
       image: form.image,
       price,
+      minBuy,
       stock,
       isHot: form.isHot,
       status: form.status,
@@ -373,6 +504,7 @@ Page({
 
   // 删除（仅编辑模式）
   remove() {
+    if (this.data.deleting || this.data.submitting) return
     wx.showModal({
       title: '删除确认',
       content: '确定删除该菜品吗？',
@@ -380,10 +512,13 @@ Page({
       confirmColor: '#ff3b30',
       success: (res) => {
         if (!res.confirm) return
+        this.setData({ deleting: true })
         api.deleteDish(this.data.id).then(() => {
           wx.showToast({ title: '已删除', icon: 'none' })
           setTimeout(() => wx.navigateBack(), 700)
-        }).catch(() => {})
+        }).catch(() => {}).then(() => {
+          this.setData({ deleting: false })
+        })
       }
     })
   }

@@ -60,7 +60,7 @@
     <view class="goods-grid">
       <view class="goods-item" wx:for="{{recommend}}" wx:key="id" bindtap="goMenu">
         <view class="goods-img">
-          <image wx:if="{{item.imageUrl}}" class="goods-img-real" src="{{item.image}}" mode="aspectFill"></image>
+          <image wx:if="{{item.hasImage}}" class="goods-img-real" src="{{item.imageUrl}}" mode="aspectFill"></image>
           <text wx:else>{{item.image}}</text>
         </view>
         <view class="goods-name ellipsis">{{item.name}}</view>

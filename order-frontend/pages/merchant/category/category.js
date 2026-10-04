@@ -9,7 +9,14 @@ Page({
   data: {
     list: [],
     icons: ICONS,
-    loading: false
+    loading: false,
+    // 自定义输入弹窗状态
+    dialogVisible: false,
+    dialogMode: 'add', // add | edit
+    dialogValue: '',
+    dialogFocus: false,
+    // 编辑时的目标分类ID
+    dialogEditId: ''
   },
 
   onShow() {
@@ -33,57 +40,78 @@ Page({
     }).then(() => this.setData({ loading: false }))
   },
 
-  // 新增分类
-  addCategory() {
-    wx.showModal({
-      title: '新增分类',
-      editable: true,
-      placeholderText: '请输入分类名称，如：凉菜',
-      confirmColor: '#2f80ed',
-      success: (res) => {
-        if (!res.confirm) return
-        const name = (res.content || '').trim()
-        if (!name) {
-          wx.showToast({ title: '分类名称不能为空', icon: 'none' })
-          return
-        }
-        api.addCategory({
-          name,
-          code: 'c_' + Date.now(),
-          icon: '🍽️',
-          sort: this.data.list.length + 1,
-          status: 1
-        }).then(() => {
-          wx.showToast({ title: '新增成功', icon: 'success' })
-          this.loadList()
-        }).catch(() => {})
-      }
+  // ==================== 自定义输入弹窗（新增 / 编辑） ====================
+
+  // 空操作：用于阻止弹窗内部点击冒泡到遮罩
+  noop() {},
+
+  // 打开新增弹窗：每次打开都清空输入框，避免残留上次内容
+  openAdd() {
+    this.setData({
+      dialogVisible: true,
+      dialogMode: 'add',
+      dialogValue: '',
+      dialogEditId: '',
+      dialogFocus: true
     })
   },
 
-  // 编辑分类名称
+  // 打开编辑弹窗：预填当前名称
   editCategory(e) {
     const { id } = e.currentTarget.dataset
     const target = this.data.list.find((c) => c.id === id)
     if (!target) return
-    wx.showModal({
-      title: '修改分类名称',
-      editable: true,
-      placeholderText: `当前：${target.name}`,
-      confirmColor: '#2f80ed',
-      success: (res) => {
-        if (!res.confirm) return
-        const name = (res.content || '').trim()
-        if (!name) {
-          wx.showToast({ title: '分类名称不能为空', icon: 'none' })
-          return
-        }
-        api.updateCategory({ id, name }).then(() => {
-          wx.showToast({ title: '已修改', icon: 'none' })
-          this.loadList()
-        }).catch(() => {})
-      }
+    this.setData({
+      dialogVisible: true,
+      dialogMode: 'edit',
+      dialogValue: target.name || '',
+      dialogEditId: id,
+      dialogFocus: true
     })
+  },
+
+  onDialogInput(e) {
+    this.setData({ dialogValue: e.detail.value })
+  },
+
+  closeDialog() {
+    this.setData({ dialogVisible: false, dialogFocus: false })
+  },
+
+  // 确定：按模式执行新增 / 编辑
+  confirmDialog() {
+    const name = (this.data.dialogValue || '').trim()
+    if (!name) {
+      wx.showToast({ title: '分类名称不能为空', icon: 'none' })
+      return
+    }
+    if (this.data.dialogMode === 'edit') {
+      this.updateCategoryName(this.data.dialogEditId, name)
+    } else {
+      this.addCategory(name)
+    }
+  },
+
+  addCategory(name) {
+    api.addCategory({
+      name,
+      code: 'c_' + Date.now(),
+      icon: '🍽️',
+      sort: this.data.list.length + 1,
+      status: 1
+    }).then(() => {
+      this.closeDialog()
+      wx.showToast({ title: '新增成功', icon: 'success' })
+      this.loadList()
+    }).catch(() => {})
+  },
+
+  updateCategoryName(id, name) {
+    api.updateCategory({ id, name }).then(() => {
+      this.closeDialog()
+      wx.showToast({ title: '已修改', icon: 'none' })
+      this.loadList()
+    }).catch(() => {})
   },
 
   // 切换启用/禁用
@@ -124,13 +152,32 @@ Page({
     const list = [...this.data.list]
     const index = list.findIndex((c) => c.id === id)
     if (index <= 0) return
-    const prev = list[index - 1]
-    // 交换 sort
-    const curSort = list[index].sort
-    const prevSort = prev.sort
+    this.swapSort(list, index, index - 1)
+  },
+
+  // 排序调整（下移）
+  moveDown(e) {
+    const { id } = e.currentTarget.dataset
+    const list = [...this.data.list]
+    const index = list.findIndex((c) => c.id === id)
+    if (index < 0 || index >= list.length - 1) return
+    this.swapSort(list, index, index + 1)
+  },
+
+  // 交换两个分类的 sort 值（升序排列，数值小的在前）
+  swapSort(list, i, j) {
+    const a = list[i]
+    const b = list[j]
+    // 若两者 sort 相同（历史数据），按索引兜底生成可交换的值，避免顺序不变
+    let aSort = a.sort
+    let bSort = b.sort
+    if (aSort === bSort) {
+      aSort = i
+      bSort = j
+    }
     Promise.all([
-      api.updateCategory({ id: list[index].id, sort: prevSort }),
-      api.updateCategory({ id: prev.id, sort: curSort })
+      api.updateCategory({ id: a.id, sort: bSort }),
+      api.updateCategory({ id: b.id, sort: aSort })
     ]).then(() => this.loadList()).catch(() => {})
   }
 })

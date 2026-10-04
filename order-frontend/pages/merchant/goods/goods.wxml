@@ -1,60 +1,141 @@
 <view class="page">
-  <view class="summary">
-    <view class="summary-item">
-      <view class="summary-value">{{goods.length}}</view>
-      <view class="summary-label">商品总数</view>
+  <!-- 顶部统计 + 搜索（固定，不随内容滚动） -->
+  <view class="header">
+    <view class="summary">
+      <view class="summary-item" data-type="all" bindtap="showStatDialog">
+        <view class="summary-value">{{goods.length}}</view>
+        <view class="summary-label">商品总数</view>
+      </view>
+      <view class="summary-item" data-type="onShelf" bindtap="showStatDialog">
+        <view class="summary-value">{{onShelfCount}}</view>
+        <view class="summary-label">在售中</view>
+      </view>
     </view>
-    <view class="summary-item">
-      <view class="summary-value">{{onShelfCount}}</view>
-      <view class="summary-label">在售中</view>
+    <view class="search-bar">
+      <text class="search-icon">🔍</text>
+      <input
+        class="search-input"
+        value="{{keyword}}"
+        placeholder="搜索商品名称"
+        confirm-type="search"
+        bindinput="onSearchInput"
+      />
+      <text wx:if="{{keyword}}" class="search-clear" bindtap="clearSearch">×</text>
     </view>
   </view>
 
-  <scroll-view class="cats" scroll-x enable-flex>
-    <view
-      class="cat {{activeCategory === 'all' ? 'active' : ''}}"
-      data-id="all"
-      bindtap="switchCategory"
-    >全部</view>
-    <view
-      wx:for="{{categories}}"
-      wx:key="id"
-      class="cat {{activeCategory === item.id ? 'active' : ''}}"
-      data-id="{{item.id}}"
-      bindtap="switchCategory"
-    >{{item.name}}</view>
-  </scroll-view>
+  <!-- 双栏主体：左分类 / 右商品，各自独立滚动 -->
+  <view class="body">
+    <!-- 左侧分类 -->
+    <view class="side-wrap">
+      <scroll-view
+        class="side"
+        scroll-y
+        enhanced
+        show-scrollbar="{{false}}"
+        bindscroll="onSideScroll"
+      >
+        <view
+          class="side-item {{activeCategory === 'all' ? 'active' : ''}}"
+          data-id="all"
+          bindtap="switchCategory"
+        >全部</view>
+        <view
+          wx:for="{{categories}}"
+          wx:key="id"
+          class="side-item {{activeCategory === item.id ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="switchCategory"
+        >{{item.name}}</view>
+        <view class="side-bottom-space"></view>
+      </scroll-view>
+      <!-- 自绘细滚动条 -->
+      <view class="thin-bar side-bar" style="height: {{sideBarH}}rpx; top: {{sideBarTop}}rpx;"></view>
+    </view>
 
-  <view
-    class="goods-item"
-    wx:for="{{list}}"
-    wx:key="id"
-    data-id="{{item.id}}"
-    bindlongpress="onGoodsLongPress"
-  >
-    <view class="thumb">
-      <image wx:if="{{item.imageUrl}}" class="thumb-img" src="{{item.image}}" mode="aspectFill"></image>
-      <text wx:else>{{item.image}}</text>
-    </view>
-    <view class="info">
-      <view class="name">{{item.name}}</view>
-      <view class="desc text-sub">{{item.desc}}</view>
-      <view class="meta">
-        <text class="price">¥{{item.price}}</text>
-        <text class="stock text-sub">库存 {{item.stock}}</text>
-        <text class="sales text-sub">月售 {{item.sales}}</text>
-      </view>
-    </view>
-    <view class="actions">
-      <view class="shelf-tag {{item.status ? 'on' : 'off'}}" data-id="{{item.id}}" catchtap="toggleShelf">
-        {{item.status ? '已上架' : '已下架'}}
-      </view>
-      <view class="edit-btn" data-id="{{item.id}}" catchtap="editGoods">编辑</view>
-      <view class="edit-btn price-btn" data-id="{{item.id}}" catchtap="editPrice">改价</view>
+    <!-- 右侧商品 -->
+    <view class="main-wrap">
+      <scroll-view
+        class="main"
+        scroll-y
+        enhanced
+        show-scrollbar="{{false}}"
+        scroll-top="{{mainScrollTop}}"
+        bindscroll="onMainScroll"
+      >
+        <view
+          class="goods-item"
+          wx:for="{{list}}"
+          wx:key="id"
+          id="goods-{{item.id}}"
+          data-id="{{item.id}}"
+          bindlongpress="onGoodsLongPress"
+        >
+          <view class="thumb">
+            <image wx:if="{{item.hasImage}}" class="thumb-img" src="{{item.imageUrl}}" mode="aspectFill"></image>
+            <text wx:else>{{item.image}}</text>
+          </view>
+          <view class="info">
+            <view class="name-row">
+              <view class="name">{{item.name}}</view>
+              <view class="shelf-tag {{item.status ? 'on' : 'off'}}" data-id="{{item.id}}" catchtap="toggleShelf">
+                {{item.status ? '已上架' : '已下架'}}
+              </view>
+            </view>
+            <view class="desc text-sub">
+              <text wx:if="{{item.isHot}}" class="hot-tag">热销推荐</text>{{item.desc}}
+            </view>
+            <view class="meta">
+              <text class="price">¥{{item.price}}</text>
+              <text wx:if="{{item.minBuy > 1}}" class="minbuy-tag">{{item.minBuy}}份起购</text>
+              <text class="stock text-sub">库存 {{item.stock}}</text>
+            </view>
+            <view class="ops">
+              <view class="edit-btn" data-id="{{item.id}}" catchtap="editGoods">编辑</view>
+              <view class="edit-btn price-btn" data-id="{{item.id}}" catchtap="editPrice">改价</view>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{list.length === 0}}" class="empty">
+          {{keyword ? '未找到相关商品' : '暂无商品，点击右下角新增'}}
+        </view>
+        <!-- 底部留白，避免被右下角加号遮挡 -->
+        <view class="list-bottom-space"></view>
+      </scroll-view>
+      <!-- 自绘细滚动条 -->
+      <view class="thin-bar main-bar" style="height: {{mainBarH}}rpx; top: {{mainBarTop}}rpx;"></view>
     </view>
   </view>
-
-  <view wx:if="{{list.length === 0}}" class="empty">暂无商品，点击右下角新增</view>
 
   <view class="fab" bindtap="addGoods">＋</view>
+
+  <!-- 全局加载蒙版：上下架等操作时展示 -->
+  <view class="loading-mask" wx:if="{{shelfLoading}}">
+    <view class="loading-box">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">{{loadingText}}</text>
+    </view>
+  </view>
+
+  <!-- 分类统计弹框：点击「商品总数 / 在售中」展示各分类下的数量 -->
+  <view wx:if="{{statVisible}}" class="stat-mask" bindtap="closeStatDialog">
+    <view class="stat-dialog" catchtap="noop">
+      <view class="stat-head">
+        <text class="stat-title">{{statTitle}}</text>
+        <text class="stat-close" bindtap="closeStatDialog">×</text>
+      </view>
+      <scroll-view scroll-y class="stat-body">
+        <view class="stat-row" wx:for="{{statList}}" wx:key="id">
+          <text class="stat-name">{{item.name}}</text>
+          <text class="stat-count">{{item.count}}</text>
+        </view>
+        <view wx:if="{{statList.length === 0}}" class="stat-empty">暂无数据</view>
+      </scroll-view>
+      <view class="stat-foot">
+        <text class="stat-total">合计</text>
+        <text class="stat-total-value">{{statTotal}}</text>
+      </view>
+    </view>
+  </view>
 </view>

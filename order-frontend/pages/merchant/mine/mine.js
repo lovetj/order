@@ -42,6 +42,13 @@ Page({
     this.loadProfile()
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    this.loadShop()
+    this.loadProfile()
+  },
+
   loadShop() {
     // 确保店铺ID与登录账号一致（切换账号后刷新）
     const admin = app.globalData.admin || {}

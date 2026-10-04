@@ -78,12 +78,16 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         dish.setDescription(dto.getDescription());
         dish.setImage(dto.getImage());
         dish.setPrice(dto.getPrice());
+        dish.setMinBuy(dto.getMinBuy());
         dish.setStock(dto.getStock());
         dish.setIsHot(dto.getIsHot());
         dish.setStatus(dto.getStatus());
         dish.setSort(dto.getSort());
         if (dish.getStatus() == null) {
             dish.setStatus(1);
+        }
+        if (dish.getMinBuy() == null || dish.getMinBuy() < 1) {
+            dish.setMinBuy(1);
         }
         if (dish.getStock() == null) {
             dish.setStock(999);
@@ -131,6 +135,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         }
         if (dto.getPrice() != null) {
             dish.setPrice(dto.getPrice());
+        }
+        if (dto.getMinBuy() != null) {
+            dish.setMinBuy(dto.getMinBuy() < 1 ? 1 : dto.getMinBuy());
         }
         if (dto.getStock() != null) {
             dish.setStock(dto.getStock());
@@ -208,6 +215,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         vo.setName(dish.getName());
         vo.setDesc(dish.getDescription());
         vo.setPrice(dish.getPrice());
+        vo.setMinBuy(dish.getMinBuy() == null || dish.getMinBuy() < 1 ? 1 : dish.getMinBuy());
         vo.setSales(dish.getSales());
         vo.setImage(dish.getImage());
         // 1 上架 -> true

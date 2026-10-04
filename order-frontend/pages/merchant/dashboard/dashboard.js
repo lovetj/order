@@ -26,6 +26,13 @@ Page({
     this.loadDashboard()
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    this.loadShop()
+    this.loadDashboard()
+  },
+
   loadShop() {
     api.getMerchantShopInfo().then((shop) => {
       if (!shop) return

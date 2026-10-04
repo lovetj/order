@@ -49,6 +49,20 @@ Page({
     this.loadMember()
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    const userInfo = app.globalData.userInfo || {}
+    this.setData({
+      userInfo,
+      isAvatarUrl: /^https?:\/\//.test(userInfo.avatar || ''),
+      tableNo: app.globalData.tableNo || '未获取'
+    })
+    this.loadUserInfo()
+    this.loadCounts()
+    this.loadMember()
+  },
+
   // 会员信息（积分 / 优惠券数量 / 等级）
   loadMember() {
     if (!app.isLogin()) return

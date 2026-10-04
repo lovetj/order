@@ -20,7 +20,7 @@
   <scroll-view class="goods-list" scroll-y>
     <view class="goods-card" wx:for="{{goodsList}}" wx:key="id">
       <view class="goods-img">
-        <image wx:if="{{item.imageUrl}}" class="goods-img-real" src="{{item.image}}" mode="aspectFill"></image>
+        <image wx:if="{{item.hasImage}}" class="goods-img-real" src="{{item.imageUrl}}" mode="aspectFill"></image>
         <text wx:else>{{item.image}}</text>
       </view>
       <view class="goods-main">
@@ -32,7 +32,14 @@
           <view class="stepper">
             <view wx:if="{{item.count > 0}}" class="step-btn minus" data-id="{{item.id}}" bindtap="minusItem">−</view>
             <text wx:if="{{item.count > 0}}" class="step-num">{{item.count}}</text>
-            <view class="step-btn plus" data-id="{{item.id}}" bindtap="addItem">＋</view>
+            <!-- 起购份数 > 1 时展示「*份起购」，否则展示加号 -->
+            <view
+              wx:if="{{item.minBuy > 1}}"
+              class="min-buy-tag"
+              data-id="{{item.id}}"
+              bindtap="addItem"
+            >{{item.minBuy}}份起购</view>
+            <view wx:else class="step-btn plus" data-id="{{item.id}}" bindtap="addItem">＋</view>
           </view>
         </view>
       </view>
@@ -50,7 +57,7 @@
     <scroll-view scroll-y class="cart-list">
       <view class="cart-item" wx:for="{{cartList}}" wx:key="key">
         <view class="cart-img">
-          <image wx:if="{{item.imageUrl}}" class="cart-img-real" src="{{item.image}}" mode="aspectFill"></image>
+          <image wx:if="{{item.hasImage}}" class="cart-img-real" src="{{item.imageUrl}}" mode="aspectFill"></image>
           <text wx:else>{{item.image}}</text>
         </view>
         <view class="cart-info">

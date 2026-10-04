@@ -32,6 +32,9 @@ public class Dish implements Serializable {
 
     private BigDecimal price;
 
+    /** 起购份数，1 表示一份起购 */
+    private Integer minBuy;
+
     private Integer stock;
 
     private Integer sales;

@@ -1,5 +1,6 @@
 // pages/spec-choose/spec-choose.js —— 菜品规格/口味选择
 const api = require('../../utils/api')
+const { formatImageUrl } = require('../../utils/util')
 
 Page({
   data: {
@@ -9,7 +10,9 @@ Page({
     selected: {},
     extraPrice: 0,
     totalPrice: 0,
-    quantity: 1
+    quantity: 1,
+    // 起购份数（后端 minBuy，默认 1）
+    minBuy: 1
   },
 
   onLoad(options) {
@@ -33,12 +36,19 @@ Page({
           selected: !!o.isDefault
         }))
       }))
+      const img = dish.image || ''
+      const hasImage = /^https?:\/\//.test(img) || img.startsWith('/')
+      // 起购份数：默认 1，至少为 1；初始数量直接取起购份数
+      const minBuy = Number(dish.minBuy) > 1 ? Math.floor(Number(dish.minBuy)) : 1
       this.setData({
         dish: {
           ...dish,
-          imageUrl: /^https?:\/\//.test(dish.image || '')
+          hasImage,
+          imageUrl: hasImage ? formatImageUrl(img) : ''
         },
-        specGroups
+        specGroups,
+        minBuy,
+        quantity: minBuy
       })
       this.calcPrice()
     }).catch(() => {})
@@ -98,8 +108,10 @@ Page({
 
   changeQty(e) {
     const delta = Number(e.currentTarget.dataset.delta)
+    // 数量不能低于起购份数（minBuy）
+    const floor = this.data.minBuy || 1
     let quantity = this.data.quantity + delta
-    if (quantity < 1) quantity = 1
+    if (quantity < floor) quantity = floor
     this.setData({ quantity })
     this.calcPrice()
   },

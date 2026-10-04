@@ -103,6 +103,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 throw new RuntimeException("菜品已下架：" + dish.getName());
             }
             int quantity = item.getQuantity() == null || item.getQuantity() <= 0 ? 1 : item.getQuantity();
+            // 起购份数校验：数量不得低于菜品设定的起购份数
+            int minBuy = dish.getMinBuy() == null || dish.getMinBuy() < 1 ? 1 : dish.getMinBuy();
+            if (quantity < minBuy) {
+                throw new RuntimeException("「" + dish.getName() + "」" + minBuy + " 份起购");
+            }
             if (dish.getStock() != null && quantity > dish.getStock()) {
                 throw new RuntimeException("「" + dish.getName() + "」库存不足，仅剩 " + dish.getStock());
             }

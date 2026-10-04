@@ -1,11 +1,15 @@
 .page {
-  padding-bottom: 60rpx;
+  padding-bottom: 260rpx;
 }
 
 .label {
   font-size: 28rpx;
   color: #333;
   min-width: 160rpx;
+}
+
+.required {
+  color: #ff3b30;
 }
 
 .preview {
@@ -116,8 +120,19 @@
   font-size: 28rpx;
 }
 
+/* 底部操作栏：固定悬浮在页面下方，删除与保存横向平排 */
 .btn-wrap {
-  padding: 40rpx 24rpx;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
 }
 
 /* 规格配置 */
@@ -144,23 +159,35 @@
 .spec-group-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 18rpx;
 }
 
 .spec-group-name {
   font-size: 28rpx;
   font-weight: 600;
+  padding: 4rpx 10rpx;
+  border-radius: 10rpx;
+}
+
+/* 激活的分组名：蓝色高亮，提示可左右移动 */
+.spec-group-name.active {
+  color: #2f80ed;
+  background: #eaf3ff;
 }
 
 .spec-tags {
   display: flex;
   align-items: center;
+  margin-left: auto;
 }
 
 .spec-tag {
+  flex-shrink: 0;
+  height: 44rpx;
+  line-height: 44rpx;
+  padding: 0 18rpx;
+  box-sizing: border-box;
   font-size: 22rpx;
-  padding: 6rpx 18rpx;
   border-radius: 999rpx;
   background: #eef0f3;
   color: #666;
@@ -173,6 +200,9 @@
 }
 
 .spec-del {
+  flex-shrink: 0;
+  height: 44rpx;
+  line-height: 44rpx;
   font-size: 22rpx;
   color: #ff3b30;
   margin-left: 16rpx;
@@ -193,6 +223,8 @@
   font-size: 25rpx;
   display: flex;
   align-items: center;
+  /* 重排时其它选项平滑让位 */
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
 .spec-option.default {
@@ -203,6 +235,38 @@
 .spec-option.add {
   color: #2f80ed;
   border-style: dashed;
+}
+
+/* 激活的选项：加粗描边，提示可左右移动 */
+.spec-option.active {
+  border-color: #2f80ed;
+  box-shadow: 0 6rpx 16rpx rgba(47, 128, 237, 0.18);
+}
+
+/* 选项单元：选项本体 + 左右移动按钮，横向排列 */
+.opt-cell {
+  display: flex;
+  align-items: center;
+}
+
+/* 左右移动按钮 */
+.move-btn {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin: 0 8rpx;
+  border-radius: 50%;
+  background: #2f80ed;
+  color: #fff;
+  font-size: 30rpx;
+  line-height: 44rpx;
+  text-align: center;
+}
+
+.move-btn.disabled {
+  background: #d8dce3;
+  color: #fff;
+  opacity: 0.6;
 }
 
 .opt-name {
@@ -221,6 +285,14 @@
   margin-left: 8rpx;
 }
 
+/* 激活项的提示文字：再点一次可切换默认 */
+.opt-hint {
+  color: #2f80ed;
+  font-size: 18rpx;
+  margin-left: 8rpx;
+  opacity: 0.75;
+}
+
 .opt-del {
   color: #bbb;
   font-size: 30rpx;
@@ -236,8 +308,11 @@
 }
 
 .submit-btn {
+  flex: 1;
   height: 92rpx;
-  line-height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-size: 32rpx;
 }
@@ -247,13 +322,86 @@
 }
 
 .delete-btn {
-  margin-top: 28rpx;
+  flex-shrink: 0;
+  padding: 0 40rpx;
   height: 92rpx;
-  line-height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   border-radius: 999rpx;
   color: #ff3b30;
   font-size: 30rpx;
   background: #fff;
   border: 2rpx solid #ffd6d2;
+  box-sizing: border-box;
+}
+
+.delete-btn.disabled {
+  opacity: 0.6;
+}
+
+/* 按钮内加载动画：白色旋转圆环 */
+.btn-spinner {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 12rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spinner-rotate 0.7s linear infinite;
+}
+
+.btn-spinner.danger {
+  border-color: rgba(255, 59, 48, 0.25);
+  border-top-color: #ff3b30;
+}
+
+@keyframes btn-spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- 保存/删除 全局加载蒙版 ---------- */
+.loading-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-box {
+  min-width: 220rpx;
+  padding: 40rpx 36rpx;
+  background: rgba(0, 0, 0, 0.78);
+  border-radius: 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 旋转圆环 */
+.loading-spinner {
+  width: 56rpx;
+  height: 56rpx;
+  border: 6rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spinner-rotate 0.7s linear infinite;
+}
+
+.loading-text {
+  margin-top: 24rpx;
+  font-size: 26rpx;
+  color: #fff;
 }

@@ -2,13 +2,16 @@
   <!-- 菜品信息 -->
   <view class="dish-head">
     <view class="dish-thumb">
-      <image wx:if="{{dish.imageUrl}}" class="dish-thumb-img" src="{{dish.image}}" mode="aspectFill"></image>
+      <image wx:if="{{dish.hasImage}}" class="dish-thumb-img" src="{{dish.imageUrl}}" mode="aspectFill"></image>
       <text wx:else>{{dish.image}}</text>
     </view>
     <view class="dish-info">
       <view class="dish-name">{{dish.name}}</view>
       <view class="dish-desc">{{dish.desc}}</view>
-      <view class="dish-price">¥{{dish.price}}</view>
+      <view class="dish-price">
+        ¥{{dish.price}}
+        <text wx:if="{{minBuy > 1}}" class="dish-minbuy">{{minBuy}}份起购</text>
+      </view>
     </view>
   </view>
 

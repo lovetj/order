@@ -32,6 +32,12 @@ Page({
     this.loadList()
   },
 
+  // 底部页签切换时刷新当前页面内容（由 custom-tab-bar 调用）
+  onTabRefresh() {
+    if (!app.isLogin()) return
+    this.loadList()
+  },
+
   loadList() {
     this.setData({ loading: true })
     api.getOrders({ pageNum: 1, pageSize: 50, status: this.data.current })
