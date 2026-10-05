@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.order.common.PageResult;
 import com.order.dto.DishDTO;
 import com.order.dto.DishVO;
+import com.order.dto.DishStatsVO;
 import com.order.dto.PageDTO;
 import com.order.entity.Dish;
 
@@ -60,4 +61,9 @@ public interface DishService extends IService<Dish> {
      * 批量删除（校验归属店铺）
      */
     void deleteBatch(List<String> ids, String shopId);
+
+    /**
+     * 管理端商品统计（总数 / 在售 / 各分类）
+     */
+    DishStatsVO statsForAdmin(String shopId);
 }

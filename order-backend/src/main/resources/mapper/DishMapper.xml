@@ -78,4 +78,22 @@
         LIMIT 1
     </select>
 
+    <select id="selectCategoryStat" resultType="com.order.dto.DishStatItem">
+        SELECT d.category_id AS id,
+               c.name AS name,
+               COUNT(1) AS total,
+               SUM(CASE WHEN d.status = 1 THEN 1 ELSE 0 END) AS onShelf
+        FROM dish d
+        LEFT JOIN category c ON d.category_id = c.id AND c.shop_id = d.shop_id
+        <where>
+            <if test="shopId != null and shopId != ''">
+                AND d.shop_id = #{shopId}
+            </if>
+            <if test="isDel != null">
+                AND d.is_del = #{isDel}
+            </if>
+        </where>
+        GROUP BY d.category_id, c.name
+    </select>
+
 </mapper>

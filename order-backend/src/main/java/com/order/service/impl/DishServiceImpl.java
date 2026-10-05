@@ -7,6 +7,8 @@ import com.order.common.PageResult;
 import com.order.config.FileConfigProperties;
 import com.order.dto.DishDTO;
 import com.order.dto.DishVO;
+import com.order.dto.DishStatItem;
+import com.order.dto.DishStatsVO;
 import com.order.dto.PageDTO;
 import com.order.entity.Dish;
 import com.order.mapper.DishMapper;
@@ -228,6 +230,22 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         vo.setStock(dish.getStock());
         vo.setIsHot(dish.getIsHot());
         vo.setSort(dish.getSort());
+        return vo;
+    }
+    @Override
+    public DishStatsVO statsForAdmin(String shopId) {
+        List<DishStatItem> items = baseMapper.selectCategoryStat(shopId, 0);
+        long total = 0, onShelf = 0;
+        if (items != null) {
+            for (DishStatItem it : items) {
+                total += it.getTotal() == null ? 0 : it.getTotal();
+                onShelf += it.getOnShelf() == null ? 0 : it.getOnShelf();
+            }
+        }
+        DishStatsVO vo = new DishStatsVO();
+        vo.setTotal(total);
+        vo.setOnShelf(onShelf);
+        vo.setCategories(items);
         return vo;
     }
 }

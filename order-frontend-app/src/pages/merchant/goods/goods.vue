@@ -5,7 +5,7 @@
     <view class="header">
       <view class="summary">
         <view class="summary-item" @click="showStatDialog('all')">
-          <view class="summary-value">{{goods.length}}</view>
+          <view class="summary-value">{{totalCount}}</view>
           <view class="summary-label">商品总数</view>
         </view>
         <view class="summary-item" @click="showStatDialog('onShelf')">
@@ -98,9 +98,25 @@
             </view>
           </view>
 
-          <view v-if="list.length === 0" class="empty">
+          <!-- 首屏加载动画 -->
+          <view v-if="listLoading" class="list-loading">
+            <view class="mini-spinner"></view>
+            <text class="list-loading-text">加载中…</text>
+          </view>
+
+          <view v-if="!listLoading && list.length === 0" class="empty">
             {{keyword ? '未找到相关商品' : '暂无商品，点击右下角新增'}}
           </view>
+
+          <!-- 下拉加载更多 -->
+          <view v-if="loadingMore" class="list-loading list-loading-more">
+            <view class="mini-spinner"></view>
+            <text class="list-loading-text">加载中…</text>
+          </view>
+
+          <!-- 到底了 -->
+          <view v-if="!listLoading && !loadingMore && !hasMore && list.length > 0" class="list-end">到底了</view>
+
           <!-- 底部留白，避免被右下角加号遮挡 -->
           <view class="list-bottom-space"></view>
         </scroll-view>
@@ -152,11 +168,17 @@ export default {
     return {
       categories: [],
       activeCategory: 'all',
-      goods: [],
       list: [],
       keyword: '',
+      totalCount: 0,
       onShelfCount: 0,
-      loading: false,
+      // 分页加载状态
+      currentPage: 1,
+      pageSize: 10,
+      total: 0,
+      hasMore: true,
+      listLoading: false,   // 首屏 / 切换分类 / 搜索加载
+      loadingMore: false,   // 下拉到底追加加载
       // 上下架操作的全局加载蒙版
       shelfLoading: false,
       loadingText: '处理中…',
@@ -195,48 +217,90 @@ export default {
     this.loadData()
   },
   methods: {
-    // 加载分类 + 全部商品（含下架）
+    // 加载分类 + 统计 + 第一页商品
     loadData() {
-      this.loading = true
-      Promise.all([
-        api.getAllCategories(),
-        api.getAdminDishes({ categoryId: 'all' })
-      ]).then(([categories, goods]) => {
-        const list = goods || []
-        // 从编辑页返回：若商品分类变更，先切到其新分类，保证能被定位到
-        const focusId = this._focusId
-        let activeCategory = this.activeCategory
-        if (focusId) {
-          const target = list.find((g) => String(g.id) === String(focusId))
-          // 目标被删除则不定位
-          if (!target) {
-            this._focusId = null
-          } else if (activeCategory !== 'all' && target.categoryId !== activeCategory) {
-            activeCategory = target.categoryId
-          }
-        }
+      this.loadCategories()
+      this.loadStats()
+      this.loadList(true)
+    },
+
+    // 加载全部商品分类
+    loadCategories() {
+      api.getAllCategories().then((categories) => {
         this.categories = categories || []
-        this.goods = list
-        this.activeCategory = activeCategory
-        this._restoreTimer && clearTimeout(this._restoreTimer)
-        this._restoreTimer = setTimeout(() => { this._restoreTimer = null }, 5000)
-        this.filter(activeCategory)
+        this.$nextTick(() => this.updateBars())
       }).catch(() => {
         this.categories = []
-        this.goods = []
-        this.list = []
-      }).then(() => {
-        this.loading = false
-        // 数据就绪后测量视口高度，初始化细滚动条
-        this.$nextTick(() => this.updateBars())
       })
     },
 
+    // 加载统计数量（总数 / 在售 / 各分类），来自独立接口
+    loadStats() {
+      api.getDishStats().then((stats) => {
+        this._statsData = stats || {}
+        this.totalCount = (stats && stats.total) || 0
+        this.onShelfCount = (stats && stats.onShelf) || 0
+      }).catch(() => {
+        this._statsData = {}
+        this.totalCount = 0
+        this.onShelfCount = 0
+      })
+    },
+
+    // 分页查询：reset=true 重新加载第一页，否则在原列表基础上追加一页
+    loadList(reset) {
+      if (reset) {
+        if (this.listLoading) return
+        this.listLoading = true
+        this.currentPage = 1
+        this.hasMore = true
+      } else {
+        if (this.listLoading || this.loadingMore) return
+        this.loadingMore = true
+      }
+      const params = {
+        pageNum: this.currentPage,
+        pageSize: this.pageSize,
+        categoryId: this.activeCategory === 'all' ? null : this.activeCategory,
+        keyword: (this.keyword || '').trim() || null
+      }
+      api.pageAdminDishes(params).then((page) => {
+        const records = ((page && page.records) || []).map((g) => this.mapItem(g))
+        this.list = reset ? records : this.list.concat(records)
+        this.total = (page && page.total) || 0
+        this.hasMore = this.currentPage < ((page && page.pages) || 0)
+        this.currentPage += 1
+        this.listLoading = false
+        this.loadingMore = false
+        // 数据就绪后测量视口高度，初始化/更新细滚动条
+        this.$nextTick(() => this.updateBars())
+      }).catch(() => {
+        this.listLoading = false
+        this.loadingMore = false
+      })
+    },
+
+    // 数据项规整：补全图片地址与 hasImage 标记
+    mapItem(g) {
+      const img = g.image || ''
+      const hasImage = /^https?:\/\//.test(img) || img.startsWith('/')
+      return { ...g, hasImage, imageUrl: hasImage ? formatImageUrl(img) : '' }
+    },
+
+    // 切换分类：重置到顶部并按新分类查询第一页
     switchCategory(id) {
+      if (this.activeCategory === id) return
       this.activeCategory = id
-      this.filter(id)
-      // 切换分类后内容高度变化，重置右侧细滚动条并回到顶部
-      this.$nextTick(() => this.updateBars())
+      this.rollTopMain()
+      this.loadList(true)
+    },
+
+    // 列表重置到顶部
+    rollTopMain() {
+      this._mainScrollTop = 0
+      this._mainScrollHeight = 0
+      // scroll-top 需从非 0 值变化才会触发，先置 0 再复位
+      this.mainScrollTop = this.mainScrollTop === 0 ? 0.1 : 0
     },
 
     // ==================== 自绘细滚动条 ====================
@@ -252,6 +316,18 @@ export default {
       this._mainScrollTop = e.detail.scrollTop
       this._mainScrollHeight = e.detail.scrollHeight
       this.refreshBar('main')
+      this.maybeLoadMore(e.detail)
+    },
+
+    // 触底时请求下一页追加渲染
+    maybeLoadMore(detail) {
+      if (this.listLoading || this.loadingMore || !this.hasMore) return
+      const viewHeight = this._mainViewHeight || 0
+      if (!viewHeight) return
+      const { scrollTop, scrollHeight } = detail || {}
+      if (scrollHeight - scrollTop - viewHeight < 30) {
+        this.loadList(false)
+      }
     },
 
     /**
@@ -321,48 +397,21 @@ export default {
       })
     },
 
-    // 搜索输入：仅按名称过滤，实时刷新
+    // 搜索输入：按名称关键字分页查询（防抖）
     onSearchInput(e) {
       this.keyword = e.detail.value || ''
-      this.filter(this.activeCategory)
+      clearTimeout(this._searchTimer)
+      this._searchTimer = setTimeout(() => {
+        this.rollTopMain()
+        this.loadList(true)
+      }, 300)
     },
 
     // 清空搜索
     clearSearch() {
       this.keyword = ''
-      this.filter(this.activeCategory)
-    },
-
-    filter(categoryId) {
-      const keyword = (this.keyword || '').trim().toLowerCase()
-      let list = categoryId === 'all'
-        ? this.goods
-        : this.goods.filter((g) => g.categoryId === categoryId)
-      // 按名称关键字过滤
-      if (keyword) {
-        list = list.filter((g) => (g.name || '').toLowerCase().indexOf(keyword) > -1)
-      }
-      const mapped = list
-        // 数据库存相对路径（或以 http 开头为历史数据），拼成完整地址用于渲染；
-        // hasImage 标记是否为真实图片（用于 WXML 区分 image / emoji 渲染）
-        .map((g) => {
-          const img = g.image || ''
-          const hasImage = /^https?:\/\//.test(img) || img.startsWith('/')
-          return { ...g, hasImage, imageUrl: hasImage ? formatImageUrl(img) : '' }
-        })
-      this.list = mapped
-      this.onShelfCount = this.goods.filter((g) => g.status).length
-      // 编辑返回定位场景：保留滚动位置，待 updateBars 完成后精确定位
-      if (this._focusId) {
-        this.$nextTick(() => this.updateBars())
-        return
-      }
-      // 列表内容变化后，重置右侧滚动条（回到顶部并重新计算长度）
-      this._mainScrollTop = 0
-      this._mainScrollHeight = 0
-      // scroll-top 需从非 0 值变化才会触发，先置 0 再复位
-      this.mainScrollTop = this.mainScrollTop === 0 ? 0.1 : 0
-      this.$nextTick(() => this.updateBars())
+      this.rollTopMain()
+      this.loadList(true)
     },
 
     // ==================== 分类统计弹框 ====================
@@ -376,28 +425,16 @@ export default {
      * @param {string} type all=全部商品 / onShelf=仅上架商品
      */
     showStatDialog(type) {
-      const all = this.goods || []
-      // 口径过滤：在售中只统计上架商品
-      const scoped = type === 'onShelf' ? all.filter((g) => g.status) : all
-      // 按分类聚合数量（未匹配到分类的归入「未分类」）
-      const categories = this.categories || []
-      const countMap = {}
-      scoped.forEach((g) => {
-        const key = g.categoryId || '__none__'
-        countMap[key] = (countMap[key] || 0) + 1
-      })
-      const statList = categories
-        .map((c) => ({ id: c.id, name: c.name, count: countMap[c.id] || 0 }))
-        // 保留有商品的分类，数量为 0 的也展示更直观；此处全部展示
-        .filter((c) => c.count > 0)
-      // 未分类兜底
-      if (countMap.__none__) {
-        statList.push({ id: '__none__', name: '未分类', count: countMap.__none__ })
-      }
+      const stats = this._statsData || {}
+      const items = stats.categories || []
+      // 口径过滤：在售中只展示上架数量
+      const list = items
+        .filter((c) => (type === 'onShelf' ? (c.onShelf || 0) > 0 : (c.total || 0) > 0))
+        .map((c) => ({ id: c.id, name: c.name || '未分类', count: type === 'onShelf' ? c.onShelf : c.total }))
       this.statVisible = true
       this.statTitle = type === 'onShelf' ? '在售中各分类数量' : '商品总数各分类数量'
-      this.statList = statList
-      this.statTotal = scoped.length
+      this.statList = list
+      this.statTotal = type === 'onShelf' ? (stats.onShelf || 0) : (stats.total || 0)
     },
 
     closeStatDialog() {
@@ -406,7 +443,7 @@ export default {
 
     // 上下架：status 前端是布尔值，接口传 1/0
     toggleShelf(id) {
-      const target = this.goods.find((g) => g.id === id)
+      const target = this.list.find((g) => g.id === id)
       if (!target) return
       // 已有操作进行中，忽略重复点击
       if (this.shelfLoading) return
@@ -416,13 +453,11 @@ export default {
       this.loadingText = nextStatus === 1 ? '正在上架…' : '正在下架…'
 
       api.updateDishStatus(id, nextStatus).then(() => {
-        const goods = this.goods.map((g) =>
+        this.list = this.list.map((g) =>
           g.id === id ? { ...g, status: !!nextStatus } : g
         )
-        this.goods = goods
-        // 操作后保持在原商品位置
-        this.focusGoods(id)
-        this.filter(this.activeCategory)
+        // 商品状态变化，刷新统计数量
+        this.loadStats()
         uni.showToast({ title: nextStatus === 1 ? '已上架' : '已下架', icon: 'none' })
       }).catch(() => {}).then(() => {
         this.shelfLoading = false
@@ -437,7 +472,7 @@ export default {
 
     // 改价
     editPrice(id) {
-      const target = this.goods.find((g) => g.id === id)
+      const target = this.list.find((g) => g.id === id)
       if (!target) return
       uni.showModal({
         title: '修改价格',
@@ -455,11 +490,7 @@ export default {
           this.shelfLoading = true
           this.loadingText = '正在改价…'
           api.updateDishPrice(id, price).then(() => {
-            const goods = this.goods.map((g) => (g.id === id ? { ...g, price } : g))
-            this.goods = goods
-            // 操作后保持在原商品位置
-            this.focusGoods(id)
-            this.filter(this.activeCategory)
+            this.list = this.list.map((g) => (g.id === id ? { ...g, price } : g))
             uni.showToast({ title: '价格已更新', icon: 'none' })
           }).catch(() => {}).then(() => {
             this.shelfLoading = false
@@ -526,7 +557,8 @@ export default {
           if (!res.confirm) return
           api.deleteDish(id).then(() => {
             uni.showToast({ title: '已删除', icon: 'none' })
-            this.loadData()
+            this.loadStats()
+            this.loadList(true)
           }).catch(() => {})
         }
       })
@@ -859,6 +891,42 @@ export default {
   color: #8a8a8a;
   font-size: 26rpx;
   padding: 120rpx 0;
+}
+
+/* 列表加载状态：首屏 / 下拉加载更多，居中旋转圆环 */
+.list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+  color: #8a8a8a;
+}
+
+/* 下拉加载更多：间距更紧凑 */
+.list-loading.list-loading-more {
+  padding: 30rpx 0;
+}
+
+.list-loading-text {
+  font-size: 26rpx;
+  margin-left: 16rpx;
+}
+
+.mini-spinner {
+  width: 34rpx;
+  height: 34rpx;
+  border: 4rpx solid rgba(0, 0, 0, 0.14);
+  border-top-color: #2f80ed;
+  border-radius: 50%;
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
+/* 到底了：列表无更多数据时展示 */
+.list-end {
+  text-align: center;
+  color: #b8b8b8;
+  font-size: 24rpx;
+  padding: 30rpx 0;
 }
 
 /* 商品列表底部留白，避免被右下角加号遮挡 */

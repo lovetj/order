@@ -43,6 +43,8 @@ export default {
   // ==================== 菜品（店家端） ====================
   getAdminDishes: (params) => http.get('/api/dish/admin/list', params || {}),
   pageAdminDishes: (data) => http.post('/api/dish/page', data),
+  // 管理端商品统计（总数/在售/各分类）
+  getDishStats: () => http.get('/api/dish/admin/stats'),
   addDish: (data) => http.post('/api/dish', data),
   updateDish: (data) => http.put('/api/dish', data),
   updateDishStatus: (id, status) => http.put(`/api/dish/${id}/status?status=${status}`),

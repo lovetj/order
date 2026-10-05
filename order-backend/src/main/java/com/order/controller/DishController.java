@@ -4,6 +4,7 @@ import com.order.common.PageResult;
 import com.order.common.Result;
 import com.order.dto.DishDTO;
 import com.order.dto.DishVO;
+import com.order.dto.DishStatsVO;
 import com.order.dto.PageDTO;
 import com.order.service.DishService;
 import com.order.util.JwtUtil;
@@ -143,5 +144,15 @@ public class DishController {
         String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
         dishService.deleteBatch(ids, shopId);
         return Result.success();
+    }
+
+    /** 管理端：商品统计（总数 / 在售 / 各分类） */
+    @GetMapping("/admin/stats")
+    public Result<DishStatsVO> stats(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
+        if (shopId == null) {
+            return Result.error(403, "无法识别店铺信息，请重新登录");
+        }
+        return Result.success(dishService.statsForAdmin(shopId));
     }
 }

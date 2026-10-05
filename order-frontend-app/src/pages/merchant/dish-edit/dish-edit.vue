@@ -20,16 +20,7 @@
         </view>
       </view>
 
-      <view class="emoji-title">或选择图标（不传图片时使用）</view>
-      <view class="emoji-grid">
-        <view
-          v-for="item in emojis"
-          :key="item"
-          class="emoji-cell"
-          :class="{ active: !isImageUrl && form.image === item }"
-          @click="chooseEmoji(item)"
-        >{{item}}</view>
-      </view>
+      
     </view>
 
     <!-- 基本信息 -->
@@ -232,9 +223,6 @@
 import api from '@/api/index'
 import { formatImageUrl, toRelativePath } from '@/utils/util'
 
-// 常用 emoji 作为图片兜底（未上传图片时使用）
-const EMOJIS = ['🍽️', '🥘', '🍗', '🐟', '🍚', '🥟', '🍜', '🍲', '🥣', '🧃', '🥤', '🍟', '🍖', '🥗', '🍤', '🍱']
-
 export default {
   data() {
     return {
@@ -242,8 +230,7 @@ export default {
       isEdit: false,
       categories: [],
       categoryIndex: 0,
-      emojis: EMOJIS,
-      // 是否为真实图片 URL（而非 emoji）
+      // 是否为真实图片 URL
       isImageUrl: false,
       // 图片完整展示地址（form.image 存相对路径，此处存拼好的完整地址用于渲染）
       imageUrl: '',
@@ -253,7 +240,7 @@ export default {
         categoryId: '',
         name: '',
         description: '',
-        image: '🍽️',
+        image: '',
         price: '',
         minBuy: '1',
         stock: '999',
@@ -282,13 +269,12 @@ export default {
     // 选择并上传图片
     chooseImage() {
       if (this.uploading) return
-      uni.chooseMedia({
+      uni.chooseImage({
         count: 1,
-        mediaType: ['image'],
         sourceType: ['album', 'camera'],
         sizeType: ['compressed'],
         success: (res) => {
-          const filePath = res.tempFiles[0].tempFilePath
+          const filePath = res.tempFilePaths[0]
           this.uploadImage(filePath)
         }
       })
@@ -315,9 +301,9 @@ export default {
       })
     },
 
-    // 移除图片，回退到 emoji
+    // 移除图片
     removeImage() {
-      this.form.image = '🍽️'
+      this.form.image = ''
       this.imageUrl = ''
       this.isImageUrl = false
     },
@@ -345,7 +331,7 @@ export default {
       api.getDishDetail(id).then((dish) => {
         if (!dish) return
         const index = this.categories.findIndex((c) => c.id === dish.categoryId)
-        const image = dish.image || '🍽️'
+        const image = dish.image || ''
         // 后端出参已是完整可访问地址（http 开头）或相对路径（历史数据），其余视为 emoji
         const isImageUrl = /^https?:\/\//.test(image) || image.startsWith('/')
         this.categoryIndex = index < 0 ? 0 : index
@@ -389,13 +375,6 @@ export default {
       const category = this.categories[index]
       this.categoryIndex = index
       this.form.categoryId = category ? category.id : ''
-    },
-
-    // 选择 emoji 图标（作为图片兜底）
-    chooseEmoji(emoji) {
-      this.form.image = emoji
-      this.imageUrl = ''
-      this.isImageUrl = false
     },
 
     // 是否热销
@@ -653,7 +632,7 @@ export default {
         uni.showToast({ title: '请选择分类', icon: 'none' })
         return
       }
-      // 菜品图片必填：需为真实上传的图片（emoji 兜底不算）
+      // 菜品图片必填：需为真实上传的图片
       if (!this.isImageUrl || !form.image || !form.image.startsWith('/')) {
         uni.showToast({ title: '请上传菜品图片', icon: 'none' })
         return
@@ -795,37 +774,6 @@ export default {
 .img-btn.primary {
   background: #2f80ed;
   color: #fff;
-}
-
-.emoji-title {
-  font-size: 24rpx;
-  color: #8a8a8a;
-  text-align: center;
-  margin: 28rpx 0 16rpx;
-}
-
-.emoji-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  justify-content: center;
-}
-
-.emoji-cell {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 16rpx;
-  background: #f5f6f8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 44rpx;
-  border: 2rpx solid transparent;
-}
-
-.emoji-cell.active {
-  border-color: #2f80ed;
-  background: #eaf3ff;
 }
 
 .form-row {
@@ -989,8 +937,11 @@ export default {
   align-items: center;
 }
 
-/* 左右移动按钮 */
+/* 左右移动按钮：flex 居中文本箭头，避免字体基线偏移 */
 .move-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 44rpx;
   height: 44rpx;
@@ -998,14 +949,14 @@ export default {
   border-radius: 50%;
   background: #2f80ed;
   color: #fff;
-  font-size: 30rpx;
-  line-height: 44rpx;
-  text-align: center;
+  font-size: 34rpx;
+  line-height: 1;
+  padding-bottom: 4rpx;
+  box-sizing: border-box;
 }
 
 .move-btn.disabled {
   background: #d8dce3;
-  color: #fff;
   opacity: 0.6;
 }
 
