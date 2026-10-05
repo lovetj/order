@@ -1,10 +1,12 @@
  package com.order.service.impl;
 
+import com.order.config.FileConfigProperties;
 import com.order.dto.MemberVO;
 import com.order.entity.User;
 import com.order.service.CouponService;
 import com.order.service.MemberService;
 import com.order.service.UserService;
+import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,9 @@ public class MemberServiceImpl implements MemberService {
     @Autowired
     private CouponService couponService;
 
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
+
     @Override
     public MemberVO getMemberInfo(String userId) {
         if (!StringUtils.hasText(userId)) {
@@ -49,7 +54,7 @@ public class MemberServiceImpl implements MemberService {
         MemberVO vo = new MemberVO();
         vo.setUserId(user.getId());
         vo.setNickName(user.getNickname());
-        vo.setAvatar(user.getAvatar());
+        vo.setAvatar(FileUrlUtil.toAbsoluteIfImage(user.getAvatar(), fileConfigProperties.getBaseServer()));
         vo.setMemberLevel(LEVEL_NAMES[levelIndex]);
         vo.setLevelIndex(levelIndex);
         vo.setPoints(user.getPoints() == null ? 0 : user.getPoints());

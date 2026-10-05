@@ -15,11 +15,15 @@
     "condition": true
   },
   "compileType": "miniprogram",
-  "simulatorPluginLibVersion": {},
+  "simulatorPluginLibVersion": {
+    "wxext14566970e7e9f62": "2.27.3"
+  },
   "packOptions": {
     "ignore": [],
     "include": []
   },
-  "appid": "wxc86fce4522f0739f",
-  "editorSetting": {}
+  "appid": "wx9d59f08ad0da2b25",
+  "editorSetting": {},
+  "isGameTourist": false,
+  "projectArchitecture": "multiPlatform"
 }

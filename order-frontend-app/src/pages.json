@@ -1,0 +1,154 @@
+{
+  "pages": [
+    {
+      "path": "pages/role/role",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/menu/menu",
+      "style": {
+        "navigationBarTitleText": "点餐"
+      }
+    },
+    {
+      "path": "pages/order/order",
+      "style": {
+        "navigationBarTitleText": "我的订单"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/member/member",
+      "style": {
+        "navigationBarTitleText": "会员中心"
+      }
+    },
+    {
+      "path": "pages/coupon/coupon",
+      "style": {
+        "navigationBarTitleText": "我的优惠券"
+      }
+    },
+    {
+      "path": "pages/coupon-center/coupon-center",
+      "style": {
+        "navigationBarTitleText": "领券中心"
+      }
+    },
+    {
+      "path": "pages/points/points",
+      "style": {
+        "navigationBarTitleText": "积分商城"
+      }
+    },
+    {
+      "path": "pages/points-record/points-record",
+      "style": {
+        "navigationBarTitleText": "兑换记录"
+      }
+    },
+    {
+      "path": "pages/spec-choose/spec-choose",
+      "style": {
+        "navigationBarTitleText": "选择规格"
+      }
+    },
+    {
+      "path": "pages/merchant/dashboard/dashboard",
+      "style": {
+        "navigationBarTitleText": "管理后台"
+      }
+    },
+    {
+      "path": "pages/merchant/goods/goods",
+      "style": {
+        "navigationBarTitleText": "商品管理"
+      }
+    },
+    {
+      "path": "pages/merchant/dish-edit/dish-edit",
+      "style": {
+        "navigationBarTitleText": "菜品编辑"
+      }
+    },
+    {
+      "path": "pages/merchant/category/category",
+      "style": {
+        "navigationBarTitleText": "分类管理"
+      }
+    },
+    {
+      "path": "pages/merchant/orders/orders",
+      "style": {
+        "navigationBarTitleText": "订单管理"
+      }
+    },
+    {
+      "path": "pages/merchant/receipt/receipt",
+      "style": {
+        "navigationBarTitleText": "打印小票"
+      }
+    },
+    {
+      "path": "pages/merchant/tables/tables",
+      "style": {
+        "navigationBarTitleText": "桌位管理"
+      }
+    },
+    {
+      "path": "pages/merchant/report/report",
+      "style": {
+        "navigationBarTitleText": "经营报表"
+      }
+    },
+    {
+      "path": "pages/merchant/coupon/coupon",
+      "style": {
+        "navigationBarTitleText": "优惠券管理"
+      }
+    },
+    {
+      "path": "pages/merchant/points-goods/points-goods",
+      "style": {
+        "navigationBarTitleText": "积分商品管理"
+      }
+    },
+    {
+      "path": "pages/merchant/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的店铺"
+      }
+    },
+    {
+      "path": "pages/merchant/shop-info/shop-info",
+      "style": {
+        "navigationBarTitleText": "店铺信息"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "扫码点餐",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f6f8"
+  }
+}

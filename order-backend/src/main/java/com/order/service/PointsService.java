@@ -14,6 +14,11 @@ public interface PointsService extends IService<PointsGoods> {
     List<PointsGoods> listAvailable(String shopId);
 
     /**
+     * 店家端积分商品列表（含下架，按店铺隔离），出参图片拼完整地址
+     */
+    List<PointsGoods> listForAdmin(String shopId);
+
+    /**
      * 积分兑换
      *
      * @param shopId 商品所属店铺（从商品读取，实现店铺隔离）

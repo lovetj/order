@@ -31,10 +31,7 @@ public class PointsAdminController {
         if (shopId == null) {
             return Result.error(403, "无法识别店铺信息，请重新登录");
         }
-        return Result.success(pointsService.list(new LambdaQueryWrapper<PointsGoods>()
-                .eq(PointsGoods::getShopId, shopId)
-                .eq(PointsGoods::getIsDel, 0)
-                .orderByAsc(PointsGoods::getSort)));
+        return Result.success(pointsService.listForAdmin(shopId));
     }
 
     /** 新增积分商品 */

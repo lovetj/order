@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.order.common.PageResult;
+import com.order.config.FileConfigProperties;
 import com.order.dto.DishDTO;
 import com.order.dto.DishVO;
 import com.order.dto.PageDTO;
@@ -11,6 +12,7 @@ import com.order.entity.Dish;
 import com.order.mapper.DishMapper;
 import com.order.service.DishService;
 import com.order.service.DishSpecService;
+import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
 
     @Autowired
     private DishSpecService dishSpecService;
+
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
 
     @Override
     public List<DishVO> listForCustomer(String shopId, String categoryId, String keyword) {
@@ -217,7 +222,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         vo.setPrice(dish.getPrice());
         vo.setMinBuy(dish.getMinBuy() == null || dish.getMinBuy() < 1 ? 1 : dish.getMinBuy());
         vo.setSales(dish.getSales());
-        vo.setImage(dish.getImage());
+        vo.setImage(FileUrlUtil.toAbsoluteIfImage(dish.getImage(), fileConfigProperties.getBaseServer()));
         // 1 上架 -> true
         vo.setStatus(dish.getStatus() != null && dish.getStatus() == 1);
         vo.setStock(dish.getStock());

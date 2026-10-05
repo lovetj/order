@@ -12,6 +12,7 @@ import com.order.dto.WxLoginDTO;
 import com.order.entity.User;
 import com.order.mapper.UserMapper;
 import com.order.service.UserService;
+import com.order.util.FileUrlUtil;
 import com.order.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,7 +122,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setSessionKey(sessionKey);
             user.setUsername(generateUsername(openid));
             user.setNickname(StringUtils.hasText(dto.getNickname()) ? dto.getNickname().trim() : "微信用户");
-            user.setAvatar(StringUtils.hasText(dto.getAvatar()) ? dto.getAvatar().trim() : null);
+            user.setAvatar(StringUtils.hasText(dto.getAvatar()) ? FileUrlUtil.toRelative(dto.getAvatar().trim()) : null);
             user.setMemberLevel("普通会员");
             user.setPoints(0);
             user.setStatus(1);
@@ -146,7 +147,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 changed = true;
             }
             if (StringUtils.hasText(dto.getAvatar()) && !dto.getAvatar().trim().equals(user.getAvatar())) {
-                user.setAvatar(dto.getAvatar().trim());
+                user.setAvatar(FileUrlUtil.toRelative(dto.getAvatar().trim()));
                 changed = true;
             }
             if (changed) {
@@ -203,7 +204,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setNickname(nickname);
         }
         if (StringUtils.hasText(avatar)) {
-            user.setAvatar(avatar);
+            user.setAvatar(FileUrlUtil.toRelative(avatar));
         }
         updateById(user);
     }

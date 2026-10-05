@@ -1,0 +1,23 @@
+/* uni.scss - 全局 SCSS 变量（uni-app 自动引入，可在任意 style 中使用） */
+
+/* 主题色 */
+$uni-primary: #ff6b35;
+$uni-primary-light: #fff1eb;
+$uni-primary-gradient: linear-gradient(135deg, #ff8a5c, #ff6b35);
+
+/* 文字 */
+$uni-text-main: #1f1f1f;
+$uni-text-sub: #8a8a8a;
+$uni-text-light: #b0b0b0;
+
+/* 背景 / 卡片 */
+$uni-bg-page: #f5f6f8;
+$uni-bg-card: #ffffff;
+$uni-line: #ececec;
+
+/* 圆角 */
+$uni-radius: 20rpx;
+$uni-radius-lg: 28rpx;
+
+/* 店家端强调色 */
+$uni-merchant: #2f80ed;

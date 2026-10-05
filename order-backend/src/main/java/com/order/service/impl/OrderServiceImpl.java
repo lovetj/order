@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.order.common.PageResult;
+import com.order.config.FileConfigProperties;
 import com.order.dto.OrderCreateDTO;
 import com.order.dto.OrderItemVO;
 import com.order.dto.OrderVO;
@@ -17,6 +18,7 @@ import com.order.mapper.OrderMapper;
 import com.order.service.CouponService;
 import com.order.service.MemberService;
 import com.order.service.OrderService;
+import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +59,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Autowired
     private com.order.service.DishSpecService dishSpecService;
+
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
 
     // ==================== 顾客下单 ====================
 
@@ -424,7 +429,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         vo.setCount(item.getQuantity());
         vo.setPrice(item.getPrice());
         vo.setAmount(item.getAmount());
-        vo.setImage(item.getDishImage());
+        vo.setImage(FileUrlUtil.toAbsoluteIfImage(item.getDishImage(), fileConfigProperties.getBaseServer()));
         vo.setSpecText(item.getSpecText());
         return vo;
     }

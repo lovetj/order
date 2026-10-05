@@ -3,6 +3,7 @@ package com.order.service.impl;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.order.config.FileConfigProperties;
 import com.order.entity.PointsExchange;
 import com.order.entity.PointsGoods;
 import com.order.entity.User;
@@ -11,6 +12,7 @@ import com.order.mapper.PointsGoodsMapper;
 import com.order.service.MemberService;
 import com.order.service.PointsService;
 import com.order.service.UserService;
+import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,13 +33,30 @@ public class PointsServiceImpl extends ServiceImpl<PointsGoodsMapper, PointsGood
     @Autowired
     private MemberService memberService;
 
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
+
     @Override
     public List<PointsGoods> listAvailable(String shopId) {
-        return list(new LambdaQueryWrapper<PointsGoods>()
+        List<PointsGoods> list = list(new LambdaQueryWrapper<PointsGoods>()
                 .eq(StringUtils.hasText(shopId), PointsGoods::getShopId, shopId)
                 .eq(PointsGoods::getStatus, 1)
                 .eq(PointsGoods::getIsDel, 0)
                 .orderByAsc(PointsGoods::getSort));
+        String baseServer = fileConfigProperties.getBaseServer();
+        list.forEach(g -> g.setImage(FileUrlUtil.toAbsoluteIfImage(g.getImage(), baseServer)));
+        return list;
+    }
+
+    @Override
+    public List<PointsGoods> listForAdmin(String shopId) {
+        List<PointsGoods> list = list(new LambdaQueryWrapper<PointsGoods>()
+                .eq(PointsGoods::getShopId, shopId)
+                .eq(PointsGoods::getIsDel, 0)
+                .orderByAsc(PointsGoods::getSort));
+        String baseServer = fileConfigProperties.getBaseServer();
+        list.forEach(g -> g.setImage(FileUrlUtil.toAbsoluteIfImage(g.getImage(), baseServer)));
+        return list;
     }
 
     @Override
@@ -109,10 +128,13 @@ public class PointsServiceImpl extends ServiceImpl<PointsGoodsMapper, PointsGood
         if (!StringUtils.hasText(userId)) {
             return java.util.Collections.emptyList();
         }
-        return pointsExchangeMapper.selectList(new LambdaQueryWrapper<PointsExchange>()
+        List<PointsExchange> list = pointsExchangeMapper.selectList(new LambdaQueryWrapper<PointsExchange>()
                 .eq(PointsExchange::getUserId, userId)
                 .eq(StringUtils.hasText(shopId), PointsExchange::getShopId, shopId)
                 .orderByDesc(PointsExchange::getCreateTime));
+        String baseServer = fileConfigProperties.getBaseServer();
+        list.forEach(e -> e.setGoodsImage(FileUrlUtil.toAbsoluteIfImage(e.getGoodsImage(), baseServer)));
+        return list;
     }
 
     @Override

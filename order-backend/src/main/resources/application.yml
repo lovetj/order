@@ -1,7 +1,7 @@
 server:
   port: 8082
   servlet:
-    context-path: /
+    context-path: /order_backend
 
 spring:
   application:
@@ -62,8 +62,7 @@ logging:
     org.springframework: info
 
 file:
-  # 图片访问基础地址：与后端服务同端口，配合 WebConfig 的 /file/** 静态映射
-  base-server: http://localhost:8082/file
+  base-server: https://2uu4401930iw.vicp.fun/order_file
   base-path: D:\\soft\\apache-tomcat-8.5.63\\webapps\\order_file
 
 # ==================== 微信小程序配置 ====================

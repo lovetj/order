@@ -21,9 +21,6 @@ import org.springframework.util.StringUtils;
  */
 public final class FileUrlUtil {
 
-    /** 静态资源访问前缀，与 WebConfig 中 /file/** 映射保持一致 */
-    public static final String FILE_PREFIX = "/file";
-
     private FileUrlUtil() {
     }
 
@@ -42,11 +39,6 @@ public final class FileUrlUtil {
         // 非 http(s) 地址：本身已是相对路径，仅补前导斜杠
         if (!isAbsoluteUrl(p)) {
             return p.startsWith("/") ? p : "/" + p;
-        }
-        // 完整 URL：截取 /file/ 之后的部分
-        int idx = p.indexOf(FILE_PREFIX + "/");
-        if (idx >= 0) {
-            return p.substring(idx + FILE_PREFIX.length());
         }
         // 完整 URL 但不是本站文件（外链图片）：原样保留，避免破坏数据
         return p;
@@ -74,11 +66,22 @@ public final class FileUrlUtil {
         if (!StringUtils.hasText(base)) {
             return p.startsWith("/") ? p : "/" + p;
         }
-        // base 已包含 /file 前缀时不再重复拼接
-        if (base.endsWith(FILE_PREFIX)) {
-            return base + (p.startsWith("/") ? p : "/" + p);
+        return base + (p.startsWith("/") ? p : "/" + p);
+    }
+
+    /**
+     * 图片字段出参统一入口：仅当是图片路径（http(s) 开头或 / 开头的相对路径）时才拼接完整地址，
+     * emoji 等非图片文本（如菜品占位 🍽️）原样返回，避免被拼成无效的图片 URL。
+     */
+    public static String toAbsoluteIfImage(String path, String baseServer) {
+        if (!StringUtils.hasText(path)) {
+            return path;
         }
-        return base + FILE_PREFIX + (p.startsWith("/") ? p : "/" + p);
+        String p = path.trim();
+        if (!p.startsWith("/") && !isAbsoluteUrl(p)) {
+            return path;
+        }
+        return toAbsolute(path, baseServer);
     }
 
     /**
