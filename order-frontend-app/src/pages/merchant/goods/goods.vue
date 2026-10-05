@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page layout-page">
     <bottom-nav />
     <!-- 顶部统计 + 搜索（固定，不随内容滚动） -->
     <view class="header">
@@ -556,9 +556,16 @@ export default {
 .page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100vh; /* 小程序端：页面视口即内容区高度 */
   box-sizing: border-box;
   background: #f5f6f8;
+  overflow: hidden; /* 禁止页面整体滚动，仅内部 scroll-view 滚动 */
+  padding-bottom: 0; /* 覆盖全局 .page 的 140rpx 底部留白 */
+  min-height: 0; /* 覆盖全局 .page 的 min-height:100vh，防止 H5 上被撑高出现页面级滚动 */
+  /* #ifdef H5 */
+  /* H5：减去原生导航栏高度（与 uni-h5 的 uni-page-wrapper 公式一致），避免页面级滚动条 */
+  height: calc(100vh - 44px - env(safe-area-inset-top));
+  /* #endif */
 }
 
 /* ---------- 顶部：统计 + 搜索 ---------- */

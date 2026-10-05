@@ -1,6 +1,7 @@
 <template>
-  <view class="page">
+  <view class="page layout-page">
     <bottom-nav />
+    <scroll-view class="layout-body" scroll-y>
     <view class="shop-bar">
       <view>
         <view class="shop-name">{{shop.name}}</view>
@@ -28,6 +29,7 @@
         </view>
       </view>
     </view>
+    </scroll-view>
   </view>
 </template>
 

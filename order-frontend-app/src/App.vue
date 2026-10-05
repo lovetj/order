@@ -120,10 +120,42 @@ button {
 }
 
 .page,
-.container,
-.menu-page {
+.container {
   min-height: 100vh;
   padding-bottom: 140rpx; /* 给底部导航留出空间 */
+}
+
+/* 三段式固定布局（tab 主页面）：
+   根容器铺满视口并禁止自身滚动，头部/内容在内部 flex 布局，
+   只让中部（layout-body）独立滚动，底部导航保持 fixed。 */
+.layout-page {
+  height: 100vh;
+  min-height: 0; /* 覆盖 .page/.container 的 min-height:100vh，避免 H5 上被撑高产生页面级滚动 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-bottom: 0; /* 底部留白由 layout-body 内部承担 */
+  /* #ifdef H5 */
+  /* H5：减去原生导航栏高度（与 uni-h5 的 uni-page-wrapper 公式一致），避免页面级滚动条 */
+  height: calc(100vh - 44px - env(safe-area-inset-top));
+  /* #endif */
+}
+
+/* 固定头部：不参与中部滚动 */
+.layout-header {
+  flex-shrink: 0;
+  background: #fff;
+}
+
+/* 中部滚动区：仅这里出现滚动条 */
+.layout-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding-bottom: 140rpx; /* 避免内容被底部导航遮挡 */
 }
 
 .card {

@@ -45,7 +45,7 @@
           @change="onCategoryChange"
         >
           <view class="picker-value">
-            {{categories[categoryIndex].name || '请选择'}} <text class="arrow">›</text>
+            {{(categories[categoryIndex] && categories[categoryIndex].name) || '请选择'}} <text class="arrow">›</text>
           </view>
         </picker>
       </view>

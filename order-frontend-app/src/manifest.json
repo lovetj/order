@@ -66,6 +66,14 @@
                 }
             }
         },
-        "title" : "扫码点餐"
+        "title" : "扫码点餐",
+        "sdkConfigs" : {
+            "maps" : {
+                "amap" : {
+                    "key" : "7ae199cfff9c1744f0b1f023b39d3fbd",
+                    "securityJsCode" : "a351a510a7e9747354fb55d5b0a4025d"
+                }
+            }
+        }
     }
 }

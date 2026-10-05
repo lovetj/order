@@ -1,6 +1,7 @@
 <template>
-  <view class="page">
+  <view class="page layout-page">
     <bottom-nav />
+    <scroll-view class="layout-body" scroll-y>
     <view class="profile">
       <view class="avatar-wrap" @click="onAvatarTap">
         <image v-if="shop.avatarUrl" class="avatar-img" :src="shop.avatarUrl" mode="aspectFill" />
@@ -35,6 +36,7 @@
     </view>
 
     <view class="reset" @click="backToRoleSelect">重新选择身份</view>
+    </scroll-view>
   </view>
 </template>
 

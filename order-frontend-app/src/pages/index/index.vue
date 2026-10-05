@@ -1,6 +1,8 @@
 <template>
-  <view class="container">
+  <view class="container layout-page">
     <bottom-nav />
+    <!-- 中部滚动区 -->
+    <scroll-view class="layout-body" scroll-y>
     <!-- 门店卡片 -->
     <view class="shop-card">
       <view class="shop-top">
@@ -73,6 +75,7 @@
         </view>
       </view>
     </view>
+    </scroll-view>
   </view>
 </template>
 

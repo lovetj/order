@@ -1,0 +1,86 @@
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective settings
+[WARNING] expected START_TAG or END_TAG not TEXT (position: TEXT seen ...<name>aliyun maven</name>\r\n\t\t\t\ua0<u... @71:7)  @ C:\Program Files\apache-maven-3.6.3\bin\..\conf\settings.xml, line 71, column 7
+[WARNING] 
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.order:order-backend >-----------------------
+[INFO] Building order-backend 1.0.0
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot-maven-plugin:2.7.18:run (default-cli) > test-compile @ order-backend >>>
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33
+[INFO] 
+[INFO] --- maven-resources-plugin:3.2.0:resources (default-resources) @ order-backend ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 1 resource
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.1:compile (default-compile) @ order-backend ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- maven-resources-plugin:3.2.0:testResources (default-testResources) @ order-backend ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory D:\weChatProject\order\order-backend\src\test\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.1:testCompile (default-testCompile) @ order-backend ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] <<< spring-boot-maven-plugin:2.7.18:run (default-cli) < test-compile @ order-backend <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot-maven-plugin:2.7.18:run (default-cli) @ order-backend ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::               (v2.7.18)
+
+2026-10-05 21:55:46.202  INFO 30460 --- [           main] com.order.OrderApplication               : Starting OrderApplication using Java 21.0.12.1 on LAPTOP-JO5H6UP6 with PID 30460 (D:\weChatProject\order\order-backend\target\classes started by tangj in D:\weChatProject\order\order-backend)
+2026-10-05 21:55:46.204 DEBUG 30460 --- [           main] com.order.OrderApplication               : Running with Spring Boot v2.7.18, Spring v5.3.31
+2026-10-05 21:55:46.205  INFO 30460 --- [           main] com.order.OrderApplication               : No active profile set, falling back to 1 default profile: "default"
+2026-10-05 21:55:47.032  INFO 30460 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-05 21:55:47.035  INFO 30460 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-10-05 21:55:47.081  INFO 30460 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 18 ms. Found 0 Redis repository interfaces.
+2026-10-05 21:55:47.929  INFO 30460 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8100 (http)
+2026-10-05 21:55:47.945  INFO 30460 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-05 21:55:47.946  INFO 30460 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-10-05 21:55:48.102  INFO 30460 --- [           main] o.a.c.c.C.[.[.[/order_backend]           : Initializing Spring embedded WebApplicationContext
+2026-10-05 21:55:48.102  INFO 30460 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1826 ms
+Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
+Registered plugin: 'com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor@2fd72332'
+Parsed mapper file: 'file [D:\weChatProject\order\order-backend\target\classes\mapper\DishMapper.xml]'
+ _ _   |_  _ _|_. ___ _ |    _ 
+| | |\/|_)(_| | |_\  |_)||_|_\ 
+     /               |         
+                        3.5.3.1 
+2026-10-05 21:55:49.857  INFO 30460 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8100 (http) with context path '/order_backend'
+2026-10-05 21:55:49.865  INFO 30460 --- [           main] com.order.OrderApplication               : Started OrderApplication in 4.17 seconds (JVM running for 4.609)
+2026-10-05 21:55:49.867  INFO 30460 --- [           main] com.order.OrderApplication               : 
+----------------------------------------------------------
+Application 'order-backend' is running! Access URLs:
+Local:    http://localhost:8100/order_backend
+External: http://192.168.44.1:8100/order_backend
+----------------------------------------------------------
+2026-10-05 21:56:27.446  INFO 30460 --- [nio-8100-exec-1] o.a.c.c.C.[.[.[/order_backend]           : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-05 21:56:27.446  INFO 30460 --- [nio-8100-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-05 21:56:27.447  INFO 30460 --- [nio-8100-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  55.285 s
+[INFO] Finished at: 2026-10-05T21:56:37+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:2.7.18:run (default-cli) on project order-backend: Application finished with exit code: -1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

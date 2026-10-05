@@ -62,7 +62,8 @@ logging:
     org.springframework: info
 
 file:
-  base-server: https://2uu4401930iw.vicp.fun/order_file
+#  base-server: https://2uu4401930iw.vicp.fun/order_file
+  base-server: http://localhost:8081/order_file
   base-path: D:\\soft\\apache-tomcat-8.5.63\\webapps\\order_file
 
 # ==================== 微信小程序配置 ====================

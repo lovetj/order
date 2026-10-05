@@ -1,7 +1,7 @@
 <template>
-  <view class="page">
+  <view class="page layout-page">
     <bottom-nav />
-    <view class="tabs">
+    <view class="tabs layout-header">
       <view
         v-for="item in tabs"
         :key="item.key"
@@ -14,6 +14,7 @@
       </view>
     </view>
 
+    <scroll-view class="layout-body" scroll-y>
     <template v-if="list.length > 0">
       <view class="card order-card" v-for="item in list" :key="item.id">
         <view class="order-head">
@@ -56,6 +57,7 @@
       <view class="empty-icon">📭</view>
       <view>暂无相关订单</view>
     </view>
+    </scroll-view>
   </view>
 </template>
 

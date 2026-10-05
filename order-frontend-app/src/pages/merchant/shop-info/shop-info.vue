@@ -52,9 +52,18 @@
         <text class="label"><text class="required">*</text>店铺地址</text>
         <input class="input" :value="form.address" placeholder="请输入或点击右侧定位" @input="onInput('address', $event)" />
         <view class="loc-btn" @click.stop="onChooseLocation">定位</view>
+
+        <!-- 定位中：全屏蒙版加载效果 -->
+        <view v-if="locating" class="loc-mask">
+          <view class="loc-mask-box">
+            <view class="loc-mask-spinner"></view>
+            <text class="loc-mask-text">定位中…</text>
+          </view>
+        </view>
       </view>
       <view class="map-preview-wrap" v-if="form.latitude && form.longitude">
         <map
+          :key="mapPreviewKey"
           class="map-preview"
           :latitude="form.latitude"
           :longitude="form.longitude"
@@ -96,6 +105,8 @@ export default {
       uploading: false,
       // 是否存在未保存的改动：用于离页提醒与「未保存」提示
       hasUnsaved: false,
+      // 店铺地址「定位」按钮点击后的加载中状态
+      locating: false,
       // 图片完整展示地址（用于 image 渲染）
       logoUrl: '',
       imageUrls: [],
@@ -115,13 +126,26 @@ export default {
         longitude: null
       },
       // 地图选点标记
-      mapMarkers: []
+      mapMarkers: [],
+      // 地图预览重建标记：H5 上 map 组件从其他页面返回后偶发空白，通过变更 key 强制重建
+      mapPreviewKey: 0
     }
   },
   onLoad() {
     this.loadShop()
+    // 监听地图选点页回传
+    uni.$on('shop-location-selected', this.onLocationSelected)
+  },
+  onShow() {
+    // H5：map 组件在页面切换/返回过程中挂载时偶发空白，返回本页时强制重建预览地图
+    if (this._pageShown) {
+      this.mapPreviewKey = Date.now()
+    }
+    this._pageShown = true
   },
   onUnload() {
+    // 解绑选点事件，避免重复触发/内存泄漏
+    uni.$off('shop-location-selected', this.onLocationSelected)
     // 关闭系统级离页拦截，避免已保存后仍弹窗
     if (this._alertEnabled && uni.disableAlertBeforeUnload) {
       uni.disableAlertBeforeUnload()
@@ -184,7 +208,15 @@ export default {
         this.logoUrl = this.logoDirty ? this.form.logo : logo
         this.imageUrls = this.imagesDirty ? this.form.images : images
         this.mapMarkers = latitude && longitude
-          ? [{ id: 1, latitude, longitude, title: shop.address || '店铺位置', width: 24, height: 24 }]
+          ? [{
+              id: 1,
+              latitude,
+              longitude,
+              title: shop.address || '店铺位置',
+              iconPath: '/static/map/marker.png',
+              width: 32,
+              height: 32
+            }]
           : []
       }).catch(() => {})
     },
@@ -209,67 +241,44 @@ export default {
     // ==================== 店铺地址（站内地图定位选点） ====================
 
     /**
-     * 地图选点 / 实时定位：
-     * 先获取当前实时定位作为地图中心，再拉起 uni.chooseLocation 选点，
-     * 选点结果写回地址文本与经纬度，并生成地图预览标记。
-     * 说明：chooseLocation 是系统原生选点页面，自带搜索、附近地点与「取消/确定」。
+     * 店铺地址（站内地图选点 / 实时定位）：
+     * 已有保存的定位地址（经纬度）时，以该地址为中心打开选点页；
+     * 否则获取当前实时定位作为初始中心。选点页支持拖动选点 + 地址搜索，
+     * 确认后通过全局事件回传地址与经纬度。
      */
     onChooseLocation() {
-      // 防重入：选点页正在打开/已经打开时，忽略重复触发，
-      // 避免 uni.getLocation 的异步回调把选点页二次拉起，造成「点了 < 页面没关闭」的假象
+      // 防重入：选点页正在打开/已经打开时，忽略重复触发
       if (this._picking) return
       this._picking = true
+      // 定位中：按钮显示加载动画
+      this.locating = true
 
       const that = this
-      const done = () => { that._picking = false }
+      const done = () => { that._picking = false; that.locating = false }
 
       const openMapChooser = (latitude, longitude) => {
-        const chooseParams = {}
+        // 跳转自研地图选点页，携带当前坐标与已填地址作为初始中心/占位
+        const query = []
         if (latitude && longitude) {
-          chooseParams.latitude = latitude
-          chooseParams.longitude = longitude
+          query.push(`latitude=${latitude}`, `longitude=${longitude}`)
         }
-        uni.chooseLocation({
-          ...chooseParams,
-          success: (res) => {
-            // res: { name, address, latitude, longitude }
-            const address = res.address || res.name || ''
-            that.form.latitude = res.latitude
-            that.form.longitude = res.longitude
-            that.form.address = address
-            that.mapMarkers = [{
-              id: 1,
-              latitude: res.latitude,
-              longitude: res.longitude,
-              title: res.name || '店铺位置',
-              width: 24,
-              height: 24
-            }]
-            that.markDirty()
-            uni.showToast({ title: '已成功定位选点', icon: 'success' })
-          },
-          fail: (err) => {
-            const msg = (err && err.errMsg) || ''
-            // 用户点 < 、取消 或系统返回：属于正常关闭，不做任何提示与处理
-            if (msg.indexOf('cancel') > -1 || msg.indexOf('fail cancel') > -1) {
-              return
-            }
-            // 仅位置权限被拒绝时才引导去设置
-            if (msg.indexOf('auth') > -1 || msg.indexOf('deny') > -1) {
-              uni.showModal({
-                title: '提示',
-                content: '需要获取您的地理位置权限以在地图上选点，请前往设置开启',
-                confirmText: '去开启',
-                success: (modalRes) => {
-                  if (modalRes.confirm) uni.openSetting()
-                }
-              })
-            }
-          },
-          complete: done
+        if (this.form.address) {
+          query.push(`address=${encodeURIComponent(this.form.address)}`)
+        }
+        uni.navigateTo({
+          url: `/pages/merchant/map-pick/map-pick${query.length ? '?' + query.join('&') : ''}`,
+          success: () => { that.locating = false },
+          fail: done
         })
       }
 
+      // 已有定位地址（保存过经纬度）：以店铺原地址为中心打开选点页
+      if (this.form.latitude && this.form.longitude) {
+        openMapChooser(this.form.latitude, this.form.longitude)
+        return
+      }
+
+      // 地址为空：获取当前位置作为选点初始中心
       uni.getLocation({
         type: 'gcj02',
         success: (locRes) => {
@@ -277,9 +286,10 @@ export default {
         },
         fail: (err) => {
           const msg = (err && err.errMsg) || ''
-          // 权限相关才引导设置；其余情况（如定位超时）直接打开地图选点
+          // 权限相关才引导设置；其余情况（如定位超时）直接打开选点页
           if (msg.indexOf('auth') > -1 || msg.indexOf('deny') > -1) {
             this._picking = false
+            this.locating = false
             uni.showModal({
               title: '提示',
               content: '需要获取您的地理位置权限以在地图上选点，请前往设置开启',
@@ -290,10 +300,36 @@ export default {
             })
             return
           }
-          // 获取当前位置失败时直接打开地图选点
+          // 获取当前位置失败时直接打开选点页
           openMapChooser()
         }
       })
+    },
+
+    /**
+     * 地图选点页回传处理：写回地址与经纬度，并更新地图预览标记
+     */
+    onLocationSelected(data) {
+      this._picking = false
+      if (!data) return
+      const latitude = Number(data.latitude)
+      const longitude = Number(data.longitude)
+      if (isNaN(latitude) || isNaN(longitude)) return
+      this.form.latitude = latitude
+      this.form.longitude = longitude
+      // 未返回地址时保留旧值，避免空串覆盖已有的地址
+      this.form.address = (data && data.address) || this.form.address || ''
+      this.mapMarkers = [{
+        id: 1,
+        latitude,
+        longitude,
+        title: (data && (data.name || data.address)) || '店铺位置',
+        iconPath: '/static/map/marker.png',
+        width: 32,
+        height: 32
+      }]
+      this.markDirty()
+      uni.showToast({ title: '已成功定位选点', icon: 'success' })
     },
 
     // ==================== 店铺 Logo（单张） ====================
@@ -724,6 +760,47 @@ export default {
   color: #2f80ed;
   border: 2rpx solid #2f80ed;
   border-radius: 999rpx;
+}
+
+/* 定位中：全屏蒙版加载遮罩 */
+.loc-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.loc-mask-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 36rpx 44rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.loc-mask-spinner {
+  width: 56rpx;
+  height: 56rpx;
+  border: 6rpx solid rgba(47, 128, 237, 0.2);
+  border-top-color: #2f80ed;
+  border-radius: 50%;
+  animation: loc-spin 0.8s linear infinite;
+}
+
+.loc-mask-text {
+  font-size: 26rpx;
+  color: #333;
+}
+
+@keyframes loc-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .map-preview-wrap {

@@ -143,6 +143,12 @@
       "style": {
         "navigationBarTitleText": "店铺信息"
       }
+    },
+    {
+      "path": "pages/merchant/map-pick/map-pick",
+      "style": {
+        "navigationBarTitleText": "选择店铺位置"
+      }
     }
   ],
   "globalStyle": {

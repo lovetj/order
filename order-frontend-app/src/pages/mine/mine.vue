@@ -1,6 +1,7 @@
 <template>
-  <view class="container">
+  <view class="container layout-page">
     <bottom-nav />
+    <scroll-view class="layout-body" scroll-y>
     <view class="user-card" @click="goMember">
       <view class="avatar">
         <image v-if="isAvatarUrl" class="avatar-img" :src="userInfo.avatar" mode="aspectFill" />
@@ -34,6 +35,7 @@
 
     <view class="btn-plain action-btn" @click="switchRole">切换到店家端</view>
     <view class="btn-plain action-btn" @click="logout">退出登录</view>
+    </scroll-view>
   </view>
 </template>
 
