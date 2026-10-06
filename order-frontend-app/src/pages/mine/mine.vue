@@ -1,6 +1,17 @@
 <template>
   <view class="container layout-page">
     <bottom-nav />
+    <!-- 未识别店铺/桌号时提示扫码 -->
+    <view v-if="needScan" class="scan-tip">
+      <view class="scan-tip-card">
+        <view class="scan-tip-icon">📷</view>
+        <view class="scan-tip-text">
+          <view class="scan-tip-title">请先扫描桌位二维码</view>
+          <view class="scan-tip-desc">未识别到店铺与桌号，订单/积分等信息不可用</view>
+        </view>
+        <view class="scan-tip-btn" @click="scanThenReload">立即扫码</view>
+      </view>
+    </view>
     <scroll-view class="layout-body" scroll-y>
     <view class="user-card" @click="goMember">
       <view class="avatar">
@@ -43,6 +54,7 @@
 // 顾客端我的
 const app = getApp()
 import api from '@/api/index'
+import { hasCustomerContext, scanOrderContext } from '@/utils/scan'
 
 export default {
   data() {
@@ -66,7 +78,8 @@ export default {
         { icon: '💬', name: '联系客服', key: 'service' }
       ],
       couponCount: 0,
-      points: 0
+      points: 0,
+      needScan: false
     }
   },
 
@@ -79,6 +92,8 @@ export default {
       uni.reLaunch({ url: '/pages/login/login?role=customer' })
       return
     }
+    this.needScan = !hasCustomerContext(app)
+    if (this.needScan) return
     const userInfo = app.globalData.userInfo || {}
     this.userInfo = userInfo
     this.isAvatarUrl = /^https?:\/\//.test(userInfo.avatar || '')
@@ -92,9 +107,23 @@ export default {
     // 底部导航切换时刷新当前页面数据
     onTabRefresh() {
       if (!app.globalData.isLogin()) return
+      this.needScan = !hasCustomerContext(app)
+      if (this.needScan) return
       const userInfo = app.globalData.userInfo || {}
       this.userInfo = userInfo
       this.isAvatarUrl = /^https?:\/\//.test(userInfo.avatar || '')
+      this.tableNo = app.globalData.tableNo || '未获取'
+      this.loadUserInfo()
+      this.loadCounts()
+      this.loadMember()
+    },
+
+    // 扫码识别店铺/桌号后刷新页面
+    async scanThenReload() {
+      const { ok } = await scanOrderContext(app)
+      if (!ok) return
+      this.needScan = false
+      const userInfo = app.globalData.userInfo || {}
       this.tableNo = app.globalData.tableNo || '未获取'
       this.loadUserInfo()
       this.loadCounts()
@@ -146,6 +175,13 @@ export default {
     },
 
     handleMenu(key) {
+      // 未识别店铺/桌号时，拦截需要三要素登录态的功能，引导先扫码
+      const needContextKeys = ['order', 'coupon', 'member', 'points', 'couponCenter']
+      if (this.needScan && needContextKeys.includes(key)) {
+        uni.showToast({ title: '请先扫描桌位二维码', icon: 'none' })
+        this.scanThenReload()
+        return
+      }
       if (key === 'order') {
         uni.reLaunch({ url: '/pages/order/order' })
         return
@@ -206,6 +242,44 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.scan-tip {
+  position: fixed;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.18);
+}
+.scan-tip-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  width: 100%;
+  max-width: 660rpx;
+  padding: 36rpx 30rpx;
+  border-radius: 24rpx;
+  background: #fff;
+  border: 1rpx solid #ffe2c0;
+  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.16);
+}
+.scan-tip-icon { font-size: 56rpx; }
+.scan-tip-title { font-size: 30rpx; font-weight: 700; color: #b35c00; }
+.scan-tip-desc { font-size: 24rpx; color: #b07a3c; margin-top: 6rpx; }
+.scan-tip-btn {
+  flex-shrink: 0;
+  padding: 16rpx 30rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #ff8a5c, #ff6b35);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+}
 .user-card {
   display: flex;
   align-items: center;

@@ -69,6 +69,11 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         if (coupon == null) {
             throw new RuntimeException("优惠券不存在");
         }
+        // 店铺隔离：只能领取当前店铺推出的优惠券
+        if (StringUtils.hasText(shopId) && StringUtils.hasText(coupon.getShopId())
+                && !shopId.equals(coupon.getShopId())) {
+            throw new RuntimeException("该优惠券不属于当前店铺");
+        }
         if (coupon.getStatus() == null || coupon.getStatus() != 1) {
             throw new RuntimeException("优惠券已下架");
         }
@@ -184,7 +189,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BigDecimal useCoupon(String userCouponId, String orderId, String userId, BigDecimal amount) {
+    public BigDecimal useCoupon(String userCouponId, String orderId, String userId, BigDecimal amount, String shopId) {
         if (!StringUtils.hasText(userCouponId)) {
             return BigDecimal.ZERO;
         }
@@ -193,6 +198,11 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
             throw new RuntimeException("优惠券不存在");
         }
         if (!uc.getUserId().equals(userId)) {
+            throw new RuntimeException("无权使用该优惠券");
+        }
+        // 店铺隔离：券必须属于下单当前店铺才能核销
+        if (StringUtils.hasText(shopId) && StringUtils.hasText(uc.getShopId())
+                && !shopId.equals(uc.getShopId())) {
             throw new RuntimeException("无权使用该优惠券");
         }
         if (uc.getStatus() != null && uc.getStatus() != UC_UNUSED) {

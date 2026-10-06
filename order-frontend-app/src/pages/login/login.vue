@@ -123,6 +123,8 @@ export default {
     const role = (options && options.role) === 'merchant' ? 'merchant' : 'customer'
     this.role = role
     this.tableNo = app.globalData.tableNo || ''
+    // 深链扫码登录：携带 back 来源页，登录成功后回点餐/首页并复用缓存的上下文
+    app.globalData.__loginBack = (options && options.back) ? options.back : ''
 
     // #ifdef MP-WEIXIN
     // 小程序端优先自动授权
@@ -177,10 +179,12 @@ export default {
         return
       }
       this.logging = true
-      // 授权 code 交给后端换取真实手机号并建档/登录
+      // 携带扫码上下文（shopId/tableId），后端据此绑定三要素登录态
       api.login({
         phoneCode: detail.code,
-        role: 'customer'
+        role: 'customer',
+        shopId: app.globalData.shopId || '',
+        tableId: app.globalData.tableId || ''
       }).then((data) => this.handleLoginSuccess(data))
         .catch((err) => {
           this.logging = false
@@ -203,7 +207,13 @@ export default {
       // 记忆手机号，下次自动回填
       uni.setStorageSync(STORAGE_LAST_PHONE, phone)
       this.logging = true
-      api.login({ phone, role: 'customer' }).then((data) => this.handleLoginSuccess(data))
+      // 携带扫码上下文（shopId/tableId），后端据此绑定三要素登录态
+      api.login({
+        phone,
+        role: 'customer',
+        shopId: app.globalData.shopId || '',
+        tableId: app.globalData.tableId || ''
+      }).then((data) => this.handleLoginSuccess(data))
         .catch((err) => {
           this.logging = false
           uni.showToast({ title: (err && err.message) || '登录失败', icon: 'none' })
@@ -214,6 +224,10 @@ export default {
     handleLoginSuccess(data) {
       setToken(data.token)
       const user = data.user || {}
+      // 持久化用户ID，供三要素登录态校验携带 X-User-Id
+      if (user.id) {
+        uni.setStorageSync('userId', user.id)
+      }
       app.globalData.userInfo = {
         nickName: user.nickname || '手机用户',
         avatar: user.avatar || '🙋',
@@ -224,7 +238,10 @@ export default {
       this.logging = false
       uni.showToast({ title: '登录成功', icon: 'success', duration: 700 })
       setTimeout(() => {
-        uni.reLaunch({ url: '/pages/index/index' })
+        // 深链扫码进来：登录后回点餐/首页并携带 shopId/tableId，复用已落好的缓存上下文
+        const back = app.globalData.__loginBack
+        app.globalData.__loginBack = ''
+        uni.reLaunch({ url: back || '/pages/index/index' })
         // 未识别店铺时提示扫码，避免点餐提交被后端拒绝
         if (!app.globalData.shopId) {
           setTimeout(() => {

@@ -56,6 +56,13 @@ jwt:
   # 过期时间：100 年，等于永不过期
   expiration: 3155760000000
 
+customer:
+  session:
+    # 顾客登录态有效期（秒），默认 1 天
+    expire-seconds: 86400
+    # 会话 key 前缀：login:{userId}:{shopId}:{tableId}
+    key-prefix: "login:"
+
 logging:
   level:
     com.order: debug

@@ -1,12 +1,13 @@
 <script>
+import api from '@/api/index'
 export default {
   globalData: {
     // 'customer' | 'merchant'
     role: '',
     // 当前店铺ID（扫码得到，多店铺隔离的核心标识）
     shopId: '',
-    // 扫码进入时携带的桌号
     tableNo: '',
+    tableId: '',
     // 购物车：{ [dishId|specText]: { id, key, name, price, image, hasImage, imageUrl, specIds, specText, count } }
     cart: {},
     // 登录用户信息
@@ -27,11 +28,15 @@ export default {
     handleLaunchQuery(query) {
       const shopId = query.shopId || ''
       const tableNo = query.tableNo || ''
+      const tableId = query.tableId || ''
       if (shopId) {
         this.setShopId(shopId)
       }
       if (tableNo) {
         this.setTableNo(tableNo)
+      }
+      if (tableId) {
+        this.setTableId(tableId)
       }
     },
 
@@ -69,15 +74,65 @@ export default {
       }
     },
 
+    // 设置桌位ID
+    setTableId(tableId) {
+      this.tableId = tableId || ''
+      if (tableId) {
+        uni.setStorageSync('tableId', tableId)
+      } else {
+        uni.removeStorageSync('tableId')
+      }
+    },
+
     // 是否已登录（有 token）
     isLogin() {
       return !!(uni.getStorageSync('token') || '')
     },
 
-    // 退出登录
+    // 退出登录：先清空后端 Redis 会话，再清本地全部缓存，退出后需重新登录
     logout() {
+      // 先调用后端清除 (user,shop,table) Redis 会话（需在清理本地之前，request.js 同步读 storage 才带得上 token/店铺/桌位）
+      try {
+        api.customerLogout()
+      } catch (e) {
+        // 静默，本地清理照常执行
+      }
       uni.removeStorageSync('token')
+      uni.removeStorageSync('userId')
+      uni.removeStorageSync('shopId')
+      uni.removeStorageSync('tableId')
+      uni.removeStorageSync('tableNo')
+      uni.removeStorageSync('__loginBack')
+      uni.removeStorageSync('userInfo')
+      this.token = ''
+      this.userId = ''
+      this.shopId = ''
+      this.tableId = ''
+      this.tableNo = ''
       this.clearRole()
+    },
+
+    /**
+     * 扫码/换桌统一登录态：已登录时重新绑定 (user, shop, table)
+     * 后端据此刷新 Redis 会话（TTL 由 customer.session.expire-seconds 控制），
+     * 未登录/登录过期时后端返回 401，前端进入登录页重新登录。
+     */
+    rebindCustomerSession() {
+      const token = uni.getStorageSync('token')
+      const userId = uni.getStorageSync('userId')
+      const shopId = this.shopId || uni.getStorageSync('shopId')
+      const tableId = this.tableId || uni.getStorageSync('tableId')
+      // 仅当已登录且具备店铺/桌位上下文时才绑定
+      if (!token || !userId || !shopId || !tableId) return
+      api.bindCustomerSession({ shopId, tableId })
+        .then((data) => {
+          if (data && data.token) {
+            uni.setStorageSync('token', data.token)
+          }
+        })
+        .catch(() => {
+          // 401 由 request.js 统一处理跳登录页，其余静默
+        })
     }
   },
   onLaunch() {
@@ -85,12 +140,15 @@ export default {
     this.globalData.role = uni.getStorageSync('role') || ''
     this.globalData.shopId = uni.getStorageSync('shopId') || ''
     this.globalData.tableNo = uni.getStorageSync('tableNo') || ''
+    this.globalData.tableId = uni.getStorageSync('tableId') || ''
 
     this.globalData.handleLaunchQuery(uni.getLaunchOptionsSync().query || {})
+    this.globalData.rebindCustomerSession()
   },
   onShow(options) {
     // 从扫码/分享等场景再次进入时，同样解析 query
     this.globalData.handleLaunchQuery((options && options.query) || {})
+    this.globalData.rebindCustomerSession()
   }
 }
 </script>

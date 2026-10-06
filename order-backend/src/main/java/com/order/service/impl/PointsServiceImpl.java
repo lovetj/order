@@ -94,16 +94,18 @@ public class PointsServiceImpl extends ServiceImpl<PointsGoodsMapper, PointsGood
         }
 
         int totalPoints = goods.getPoints() * qty;
+        // 兑换消耗积分归属商品所属店铺（店铺隔离）
+        String goodsShopId = StringUtils.hasText(goods.getShopId()) ? goods.getShopId() : shopId;
 
-        // 扣减积分（内部校验余额）
-        memberService.deductPoints(userId, totalPoints);
+        // 扣减积分（按店铺账本，内部校验余额）
+        memberService.deductPoints(userId, goodsShopId, totalPoints);
 
         // 生成兑换记录
         PointsExchange exchange = new PointsExchange();
         exchange.setExchangeNo("E" + System.currentTimeMillis() + RandomUtil.randomNumbers(3));
         exchange.setUserId(userId);
         // 兑换记录归属商品所属店铺（店铺隔离）
-        exchange.setShopId(StringUtils.hasText(goods.getShopId()) ? goods.getShopId() : shopId);
+        exchange.setShopId(goodsShopId);
         exchange.setGoodsId(goodsId);
         exchange.setGoodsName(goods.getName());
         exchange.setGoodsImage(goods.getImage());

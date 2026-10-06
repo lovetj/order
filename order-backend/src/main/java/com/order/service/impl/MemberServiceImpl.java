@@ -1,8 +1,9 @@
- package com.order.service.impl;
+package com.order.service.impl;
 
 import com.order.config.FileConfigProperties;
 import com.order.dto.MemberVO;
 import com.order.entity.User;
+import com.order.mapper.UserPointsMapper;
 import com.order.service.CouponService;
 import com.order.service.MemberService;
 import com.order.service.UserService;
@@ -38,10 +39,18 @@ public class MemberServiceImpl implements MemberService {
     private CouponService couponService;
 
     @Autowired
+    private UserPointsMapper userPointsMapper;
+
+    @Autowired
     private FileConfigProperties fileConfigProperties;
 
     @Override
     public MemberVO getMemberInfo(String userId) {
+        return getMemberInfo(userId, null);
+    }
+
+    @Override
+    public MemberVO getMemberInfo(String userId, String shopId) {
         if (!StringUtils.hasText(userId)) {
             throw new RuntimeException("用户未登录");
         }
@@ -57,7 +66,10 @@ public class MemberServiceImpl implements MemberService {
         vo.setAvatar(FileUrlUtil.toAbsoluteIfImage(user.getAvatar(), fileConfigProperties.getBaseServer()));
         vo.setMemberLevel(LEVEL_NAMES[levelIndex]);
         vo.setLevelIndex(levelIndex);
-        vo.setPoints(user.getPoints() == null ? 0 : user.getPoints());
+        // 积分按商家隔离：有 shopId 时取该店账本积分，否则回退全局 user.points
+        vo.setPoints(StringUtils.hasText(shopId)
+                ? resolveShopPoints(userId, shopId)
+                : (user.getPoints() == null ? 0 : user.getPoints()));
         vo.setTotalConsume(user.getTotalConsume() == null ? BigDecimal.ZERO : user.getTotalConsume());
         vo.setOrderCount(user.getOrderCount() == null ? 0 : user.getOrderCount());
 
@@ -93,7 +105,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addOrderReward(String userId, BigDecimal amount) {
+    public void addOrderReward(String userId, String shopId, BigDecimal amount) {
         if (!StringUtils.hasText(userId) || amount == null) {
             return;
         }
@@ -104,7 +116,13 @@ public class MemberServiceImpl implements MemberService {
         // 积分
         int addPoints = amount.multiply(BigDecimal.valueOf(POINTS_PER_YUAN))
                 .setScale(0, RoundingMode.DOWN).intValue();
-        user.setPoints((user.getPoints() == null ? 0 : user.getPoints()) + addPoints);
+        if (StringUtils.hasText(shopId)) {
+            // 按商家隔离：累加到该店账本
+            userPointsMapper.addPoints(userId, shopId, addPoints);
+        } else {
+            // 兼容旧调用：无 shopId 时累加到全局 user.points
+            user.setPoints((user.getPoints() == null ? 0 : user.getPoints()) + addPoints);
+        }
 
         // 累计消费与订单数
         BigDecimal total = user.getTotalConsume() == null ? BigDecimal.ZERO : user.getTotalConsume();
@@ -118,10 +136,25 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deductPoints(String userId, Integer points) {
+    public void addOrderReward(String userId, BigDecimal amount) {
+        addOrderReward(userId, null, amount);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deductPoints(String userId, String shopId, Integer points) {
         if (!StringUtils.hasText(userId) || points == null || points <= 0) {
             return;
         }
+        if (StringUtils.hasText(shopId)) {
+            // 按商家隔离：从该店账本扣减，余额不足则回滚事务
+            int affected = userPointsMapper.deductEnough(userId, shopId, points);
+            if (affected == 0) {
+                throw new RuntimeException("积分不足");
+            }
+            return;
+        }
+        // 兼容旧调用：从全局 user.points 扣减
         User user = userService.getById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
@@ -132,6 +165,18 @@ public class MemberServiceImpl implements MemberService {
         }
         user.setPoints(current - points);
         userService.updateById(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deductPoints(String userId, Integer points) {
+        deductPoints(userId, null, points);
+    }
+
+    /** 取用户在指定店铺的积分余额，账本不存在按 0 处理 */
+    private int resolveShopPoints(String userId, String shopId) {
+        Integer points = userPointsMapper.selectPoints(userId, shopId);
+        return points == null ? 0 : points;
     }
 
     private int resolveLevelIndex(BigDecimal totalConsume) {

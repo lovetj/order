@@ -16,8 +16,10 @@ public interface OrderMapper extends BaseMapper<Order> {
     /**
      * 按状态分组统计订单数量（顾客维度，跨店铺统计该用户全部订单）
      */
-    @Select("SELECT status, COUNT(*) AS cnt FROM `order` WHERE user_id = #{userId} GROUP BY status")
-    List<Map<String, Object>> countGroupByStatus(@Param("userId") String userId);
+    @Select("<script>SELECT status, COUNT(*) AS cnt FROM `order` WHERE user_id = #{userId} " +
+            "<if test='shopId != null and shopId != \"\"'>AND shop_id = #{shopId}</if> " +
+            "GROUP BY status</script>")
+    List<Map<String, Object>> countGroupByStatus(@Param("userId") String userId, @Param("shopId") String shopId);
 
     /**
      * 统计某天的营业额（不含已取消），按店铺隔离

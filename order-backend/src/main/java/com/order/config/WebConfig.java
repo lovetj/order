@@ -17,6 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
     private MerchantAuthInterceptor merchantAuthInterceptor;
 
     @Autowired
+    private CustomerAuthInterceptor customerAuthInterceptor;
+
+    @Autowired
     private FileConfigProperties fileConfigProperties;
 
     @Override
@@ -59,5 +62,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(merchantAuthInterceptor)
                 .addPathPatterns("/api/**")
                 .order(1);
+        // 顾客三要素登录态校验：order=2 在商家校验之后，只增强声明内接口，其余放行
+        registry.addInterceptor(customerAuthInterceptor)
+                .addPathPatterns("/api/**")
+                .order(2);
     }
 }

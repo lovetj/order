@@ -9,6 +9,12 @@ export default {
   login: (data) => http.post('/api/user/phone-login', data),
   // 顾客端：微信 openid 登录（保留兼容，一般不再使用）
   wxLogin: (data) => http.post('/api/user/wx-login', data),
+  // 顾客三要素登录态：扫码/换桌时绑定 (user, shop, table)
+  bindCustomerSession: (data) => http.post('/api/customer/session/bind', data),
+  // 校验当前三要素登录态是否有效
+  checkCustomerSession: () => http.get('/api/customer/session/check'),
+  // 退出登录：清除当前(店铺,桌位)的 Redis 会话，调用后再清本地缓存
+  customerLogout: () => http.post('/api/customer/session/logout', {}),
   // 当前用户信息
   getUserInfo: () => http.get('/api/user/info'),
   // 更新用户资料
@@ -75,6 +81,8 @@ export default {
   updateTable: (data) => http.put('/api/table', data),
   toggleTable: (id) => http.put(`/api/table/${id}/toggle`),
   deleteTable: (id) => http.del(`/api/table/${id}`),
+  // 顾客端公开查询：按桌位ID回查桌号（扫码进入点餐页时使用）
+  getTableByCustomerId: (id) => http.get(`/api/dining-table/${id}`),
 
   // ==================== 经营报表（店家端） ====================
   getReport: (params) => http.get('/api/report/summary', params || {}),

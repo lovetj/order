@@ -50,6 +50,15 @@ export function request(options) {
   if (shopId) {
     finalHeader['X-Shop-Id'] = shopId
   }
+  // 顾客三要素登录态：携带用户ID与桌位ID，后端据此校验 (user, shop, table)
+  const userId = uni.getStorageSync('userId') || ''
+  if (userId) {
+    finalHeader['X-User-Id'] = userId
+  }
+  const tableId = uni.getStorageSync('tableId') || ''
+  if (tableId) {
+    finalHeader['X-Table-Id'] = tableId
+  }
 
   return new Promise((resolve, reject) => {
     uni.request({

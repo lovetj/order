@@ -23,7 +23,63 @@
 
     <view v-if="list.length === 0" class="empty">暂无桌位，点击右下角新增</view>
 
-    <view class="fab" @click="addTable">＋</view>
+    <view class="fab" @click="openAdd">＋</view>
+
+    <!-- 桌位弹窗（新增/编辑共用）：桌号 + 人数 -->
+    <view v-if="addVisible" class="mask" @click="closeAdd">
+      <view class="dialog" @click.stop="noop">
+        <view class="dialog-head">
+          <text class="dialog-title">{{ addId ? '编辑桌位' : '新增桌位' }}</text>
+          <text class="dialog-close" @click="closeAdd">×</text>
+        </view>
+        <view class="dialog-body">
+          <view class="form-item">
+            <text class="form-label">桌号</text>
+            <input
+              class="form-input"
+              :value="addNo"
+              placeholder="如 A01"
+              maxlength="10"
+              @input="onNoInput"
+            />
+          </view>
+          <view class="form-item">
+            <text class="form-label">人数</text>
+            <input
+              class="form-input"
+              type="number"
+              :value="String(addCapacity)"
+              placeholder="可容纳人数"
+              @input="onCapacityInput"
+            />
+          </view>
+        </view>
+        <view class="dialog-foot">
+          <view class="dialog-btn cancel" @click="closeAdd">取消</view>
+          <view class="dialog-btn ok" @click="confirmAdd">确定</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 点餐链接弹窗：展示链接 + 一键复制 -->
+    <view v-if="qrcodeVisible" class="mask" @click="closeQrcode">
+      <view class="dialog" @click.stop="noop">
+        <view class="dialog-head">
+          <text class="dialog-title">桌位点餐链接</text>
+          <text class="dialog-close" @click="closeQrcode">×</text>
+        </view>
+        <view class="dialog-body">
+          <view class="link-box" @longpress="copyLink">
+            <text class="link-text">{{ qrcodeLink }}</text>
+          </view>
+          <view class="link-tip">长按复制链接，将链接生成二维码后贴在桌面即可点餐</view>
+        </view>
+        <view class="dialog-foot">
+          <view class="dialog-btn cancel" @click="closeQrcode">关闭</view>
+          <view class="dialog-btn ok" @click="copyLink">复制链接</view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -36,7 +92,15 @@ export default {
     return {
       shopId: '',
       list: [],
-      loading: false
+      loading: false,
+      // 新增桌位弹窗
+      addVisible: false,
+      addId: null,
+      addNo: '',
+      addCapacity: 4,
+      // 点餐链接弹窗
+      qrcodeVisible: false,
+      qrcodeLink: ''
     }
   },
   onShow() {
@@ -66,31 +130,45 @@ export default {
       })
     },
 
-    // 新增桌位
-    addTable() {
-      uni.showModal({
-        title: '新增桌位',
-        editable: true,
-        placeholderText: '请输入桌号，如 A01',
-        confirmColor: '#2f80ed',
-        success: (res) => {
-          if (!res.confirm) return
-          const tableNo = (res.content || '').trim().toUpperCase()
-          if (!tableNo) {
-            uni.showToast({ title: '桌号不能为空', icon: 'none' })
-            return
-          }
-          // 店铺ID由后端从登录态注入，前端不再传，避免越权
-          api.addTable({
-            tableNo,
-            capacity: 4,
-            status: 1
-          }).then(() => {
-            uni.showToast({ title: '新增成功', icon: 'success' })
-            this.loadList()
-          }).catch(() => {})
-        }
-      })
+    // 新增桌位弹窗：录入桌号与人数的辅助状态
+    noop() {},
+    // 打开新增弹窗
+    openAdd() {
+      this.addId = null
+      this.addNo = ''
+      this.addCapacity = 4
+      this.addVisible = true
+    },
+    closeAdd() {
+      this.addVisible = false
+    },
+    onNoInput(e) {
+      this.addNo = (e.detail.value || '').trim().toUpperCase()
+    },
+    onCapacityInput(e) {
+      this.addCapacity = Number(e.detail.value)
+    },
+    // 确认新增/编辑
+    confirmAdd() {
+      const tableNo = (this.addNo || '').trim().toUpperCase()
+      if (!tableNo) {
+        uni.showToast({ title: '请输入桌号', icon: 'none' })
+        return
+      }
+      const capacity = this.addCapacity >= 1 ? this.addCapacity : 1
+      const payload = { tableNo, capacity }
+      const done = () => {
+        this.addVisible = false
+        uni.showToast({ title: this.addId ? '已修改' : '新增成功', icon: 'none' })
+        this.loadList()
+      }
+      if (this.addId) {
+        // 编辑：店铺ID由后端从登录态校验归属
+        api.updateTable({ id: this.addId, ...payload }).then(done).catch(() => {})
+      } else {
+        // 新增：店铺ID由后端从登录态注入，前端不再传，避免越权
+        api.addTable({ ...payload, status: 1 }).then(done).catch(() => {})
+      }
     },
 
     // 启用/停用
@@ -101,43 +179,42 @@ export default {
       }).catch(() => {})
     },
 
-    // 生成/查看桌位二维码（提示扫码路径）
+    // 查看桌位点餐链接：展示指向顾客点餐页的完整链接，支持复制
     showQrcode(id) {
       const table = this.list.find((t) => t.id === id)
       if (!table) return
-      // 二维码必须携带 shopId，顾客扫码后才能识别所属店铺
-      const path = `pages/role/role?shopId=${this.shopId}&tableNo=${table.tableNo}`
-      uni.showModal({
-        title: `桌位 ${table.tableNo} 二维码`,
-        content: `顾客扫码后进入的地址：\n${path}\n\n将上面的地址生成二维码（如草料二维码等在线工具），打印后贴在餐桌上。`,
-        showCancel: false,
-        confirmText: '知道了',
-        confirmColor: '#2f80ed'
+      const path = `#/pages/menu/menu?shopId=${this.shopId}&tableId=${table.id}`
+      let link = path
+      // H5 端拼接运行时域名得到完整链接；非 H5 端无 Web 域名，仅展示应用内路径
+      // #ifdef H5
+      const host = (typeof location !== 'undefined' && location.origin) ? location.origin : ''
+      link = host + path
+      // #endif
+      this.qrcodeLink = link
+      this.qrcodeVisible = true
+    },
+    closeQrcode() {
+      this.qrcodeVisible = false
+    },
+    // 复制链接到剪贴板
+    copyLink() {
+      if (!this.qrcodeLink) return
+      uni.setClipboardData({
+        data: this.qrcodeLink,
+        success: () => {
+          uni.showToast({ title: '已复制', icon: 'none' })
+        }
       })
     },
 
-    // 修改桌号
+    // 修改桌号/人数
     editTable(id) {
       const table = this.list.find((t) => t.id === id)
       if (!table) return
-      uni.showModal({
-        title: '修改桌号',
-        editable: true,
-        placeholderText: `当前 ${table.tableNo}`,
-        confirmColor: '#2f80ed',
-        success: (res) => {
-          if (!res.confirm) return
-          const tableNo = (res.content || '').trim().toUpperCase()
-          if (!tableNo) {
-            uni.showToast({ title: '桌号不能为空', icon: 'none' })
-            return
-          }
-          api.updateTable({ id, tableNo }).then(() => {
-            uni.showToast({ title: '已修改', icon: 'none' })
-            this.loadList()
-          }).catch(() => {})
-        }
-      })
+      this.addId = id
+      this.addNo = table.tableNo || ''
+      this.addCapacity = table.capacity || 4
+      this.addVisible = true
     },
 
     deleteTable(id) {
@@ -257,5 +334,108 @@ export default {
   justify-content: center;
   box-shadow: 0 10rpx 26rpx rgba(47, 128, 237, 0.4);
   z-index: 100;
+}
+
+/* ---------- 新增桌位弹窗 ---------- */
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  width: 600rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 30rpx 10rpx;
+}
+
+.dialog-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.dialog-close {
+  font-size: 40rpx;
+  color: #999;
+  line-height: 1;
+}
+
+.dialog-body {
+  padding: 10rpx 30rpx;
+}
+
+.form-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.form-label {
+  width: 120rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.form-input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.dialog-foot {
+  display: flex;
+  padding: 24rpx 30rpx 30rpx;
+  gap: 20rpx;
+}
+
+.dialog-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.dialog-btn.cancel {
+  background: #f2f3f5;
+  color: #666;
+}
+
+.dialog-btn.ok {
+  background: #2f80ed;
+  color: #fff;
+}
+
+.link-box {
+  background: #f5f6f8;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin: 6rpx 0 16rpx;
+  border: 1rpx solid #e5e6eb;
+}
+
+.link-text {
+  font-size: 26rpx;
+  color: #2f80ed;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.link-tip {
+  font-size: 24rpx;
+  color: #999;
 }
 </style>

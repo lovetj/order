@@ -52,29 +52,35 @@ public class OrderController {
                                             @RequestParam(defaultValue = "10") Integer pageSize,
                                             @RequestParam(required = false) String status,
                                             @RequestHeader(value = "Authorization", required = false) String authorization,
-                                            @RequestHeader(value = "userId", required = false) String headerUserId) {
+                                            @RequestHeader(value = "userId", required = false) String headerUserId,
+                                            @RequestHeader(value = ShopContext.SHOP_ID_HEADER, required = false) String headerShopId) {
         String userId = AuthUtil.resolveUserId(jwtUtil, authorization, headerUserId);
         if (userId == null) {
             return Result.error(401, "用户未登录，请先登录");
         }
-        return Result.success(orderService.pageForCustomer(pageNum, pageSize, status, userId));
+        String shopId = ShopContext.resolveCustomerShopId(headerShopId);
+        return Result.success(orderService.pageForCustomer(pageNum, pageSize, status, userId, shopId));
     }
 
     /** 顾客订单各状态数量（"我的"页入口/订单页签） */
     @GetMapping("/counts")
     public Result<Map<String, Long>> counts(@RequestHeader(value = "Authorization", required = false) String authorization,
-                                            @RequestHeader(value = "userId", required = false) String headerUserId) {
+                                            @RequestHeader(value = "userId", required = false) String headerUserId,
+                                            @RequestHeader(value = ShopContext.SHOP_ID_HEADER, required = false) String headerShopId) {
         String userId = AuthUtil.resolveUserId(jwtUtil, authorization, headerUserId);
         if (userId == null) {
             return Result.error(401, "用户未登录，请先登录");
         }
-        return Result.success(orderService.countByUser(userId));
+        String shopId = ShopContext.resolveCustomerShopId(headerShopId);
+        return Result.success(orderService.countByUser(userId, shopId));
     }
 
     /** 订单详情 */
     @GetMapping("/{id}")
-    public Result<OrderVO> detail(@PathVariable String id) {
-        OrderVO vo = orderService.getDetail(id);
+    public Result<OrderVO> detail(@PathVariable String id,
+                                  @RequestHeader(value = ShopContext.SHOP_ID_HEADER, required = false) String headerShopId) {
+        String shopId = ShopContext.resolveCustomerShopId(headerShopId);
+        OrderVO vo = orderService.getDetail(id, shopId);
         if (vo == null) {
             return Result.error(404, "订单不存在");
         }
@@ -86,12 +92,13 @@ public class OrderController {
     public Result<Void> cancel(@PathVariable String id,
                                @RequestParam(required = false) String reason,
                                @RequestHeader(value = "Authorization", required = false) String authorization,
-                               @RequestHeader(value = "userId", required = false) String headerUserId) {
+                               @RequestHeader(value = "userId", required = false) String headerUserId,
+                               @RequestHeader(value = ShopContext.SHOP_ID_HEADER, required = false) String headerShopId) {
         String userId = AuthUtil.resolveUserId(jwtUtil, authorization, headerUserId);
         if (userId == null) {
             return Result.error(401, "用户未登录，请先登录");
         }
-        orderService.cancel(id, userId, reason);
+        orderService.cancel(id, userId, reason, ShopContext.resolveCustomerShopId(headerShopId));
         return Result.success();
     }
 

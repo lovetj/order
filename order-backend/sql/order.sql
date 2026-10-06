@@ -503,4 +503,22 @@ CREATE TABLE `points_exchange` (
   KEY `idx_verify_code` (`verify_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='积分兑换记录表';
 
+
+
+-- ------------------------------------------------------------
+-- 用户积分账本表（按商家隔离）
+-- 每位顾客在每家店铺拥有独立积分余额，以 (user_id, shop_id) 为复合主键。
+-- 旧表 user.points 为全局积分，不再作为多店铺积分依据（保留旧字段，回退兼容用）。
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `user_points`;
+CREATE TABLE `user_points` (
+  `user_id` varchar(128) NOT NULL COMMENT '用户ID',
+  `shop_id` varchar(128) NOT NULL COMMENT '所属店铺ID（多店铺隔离）',
+  `points` int NOT NULL DEFAULT '0' COMMENT '该店铺积分余额',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`user_id`, `shop_id`),
+  KEY `idx_shop_id` (`shop_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户积分账本表（按商家隔离）';
+
 SET FOREIGN_KEY_CHECKS = 1;

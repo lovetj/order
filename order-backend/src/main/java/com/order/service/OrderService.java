@@ -23,7 +23,7 @@ public interface OrderService extends IService<Order> {
      *
      * @param status 前端状态字符串 pending / cooking / done / canceled，null 或 all 表示全部
      */
-    PageResult<OrderVO> pageForCustomer(Integer pageNum, Integer pageSize, String status, String userId);
+    PageResult<OrderVO> pageForCustomer(Integer pageNum, Integer pageSize, String status, String userId, String shopId);
 
     /**
      * 管理端订单分页列表（仅本店订单）
@@ -33,13 +33,13 @@ public interface OrderService extends IService<Order> {
     /**
      * 订单详情
      */
-    OrderVO getDetail(String id);
+    OrderVO getDetail(String id, String shopId);
 
     /**
      * 各状态订单数量（顾客端"我的"入口）
      * 返回: { pending, cooking, done, canceled, all }
      */
-    Map<String, Long> countByUser(String userId);
+    Map<String, Long> countByUser(String userId, String shopId);
 
     /**
      * 各状态订单数量（管理端 Tab 角标，仅本店）
@@ -64,5 +64,5 @@ public interface OrderService extends IService<Order> {
     /**
      * 顾客取消订单
      */
-    void cancel(String id, String userId, String reason);
+    void cancel(String id, String userId, String reason, String shopId);
 }

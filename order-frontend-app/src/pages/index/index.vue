@@ -1,6 +1,17 @@
 <template>
   <view class="container layout-page">
     <bottom-nav />
+    <!-- 未识别店铺/桌号时提示扫码 -->
+    <view v-if="needScan" class="scan-tip">
+      <view class="scan-tip-card">
+        <view class="scan-tip-icon">📷</view>
+        <view class="scan-tip-text">
+          <view class="scan-tip-title">请先扫描桌位二维码</view>
+          <view class="scan-tip-desc">未识别到店铺与桌号，点餐需先识别桌位</view>
+        </view>
+        <view class="scan-tip-btn" @click="scanTable">立即扫码</view>
+      </view>
+    </view>
     <!-- 中部滚动区 -->
     <scroll-view class="layout-body" scroll-y>
     <!-- 门店卡片 -->
@@ -41,6 +52,7 @@
 // 顾客端首页
 const app = getApp()
 import api from '@/api/index'
+import { hasCustomerContext, scanOrderContext, ensureCustomerContext } from '@/utils/scan'
 
 export default {
   data() {
@@ -57,8 +69,14 @@ export default {
         { id: 2, emoji: '💰', title: '满 100 减 20', desc: '堂食全场通用' },
         { id: 3, emoji: '🔥', title: '招牌菜品 8 折', desc: '每日限量供应' }
       ],
-      notices: []
+      notices: [],
+      needScan: false
     }
+  },
+
+  onLoad(options) {
+    // 与点餐页一致：路由上下文落缓存 + 未登录跳登录页（防重入）
+    ensureCustomerContext(options)
   },
 
   onShow() {
@@ -67,11 +85,11 @@ export default {
       return
     }
     // 顾客端未登录（如退出后返回）时引导重新登录
-    if (!app.globalData.isLogin()) {
-      uni.reLaunch({ url: '/pages/login/login?role=customer' })
-      return
-    }
+    if (!app.globalData.isLogin()) return
+    this.needScan = !hasCustomerContext(app)
     this.tableNo = app.globalData.tableNo || '未获取'
+    // 无店铺/桌位上下文时不发请求，仅提示扫码
+    if (this.needScan) return
     this.loadShop()
   },
 
@@ -79,7 +97,10 @@ export default {
     // 底部导航切换时刷新当前页面数据
     onTabRefresh() {
       if (!app.globalData.isLogin()) return
+      this.needScan = !hasCustomerContext(app)
       this.tableNo = app.globalData.tableNo || '未获取'
+      // 无店铺/桌位上下文时不发请求，仅提示扫码
+      if (this.needScan) return
       this.loadShop()
     },
 
@@ -101,26 +122,13 @@ export default {
       }).catch(() => {})
     },
 
-    scanTable() {
-      uni.scanCode({
-        success: (res) => {
-          const parsed = this.parseQrContent(res.result || '')
-          if (parsed.shopId) {
-            app.globalData.setShopId(parsed.shopId)
-          }
-          if (parsed.tableNo) {
-            app.globalData.setTableNo(parsed.tableNo)
-          }
-          this.tableNo = parsed.tableNo || app.globalData.tableNo || '未获取'
-          uni.showToast({
-            title: parsed.tableNo ? `已识别桌号 ${parsed.tableNo}` : '未识别到桌号',
-            icon: 'none'
-          })
-          // 切换店铺后重新加载本店菜单
-          this.loadShop()
-        },
-        fail: () => uni.showToast({ title: '扫码已取消', icon: 'none' })
-      })
+    async scanTable() {
+      const { ok, tableNo } = await scanOrderContext(app)
+      if (!ok) return
+      this.tableNo = tableNo || app.globalData.tableNo || '未获取'
+      this.needScan = false
+      // 切换店铺后重新加载本店菜单
+      this.loadShop()
     },
 
     /**
@@ -160,6 +168,44 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.scan-tip {
+  position: fixed;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.18);
+}
+.scan-tip-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  width: 100%;
+  max-width: 660rpx;
+  padding: 36rpx 30rpx;
+  border-radius: 24rpx;
+  background: #fff;
+  border: 1rpx solid #ffe2c0;
+  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.16);
+}
+.scan-tip-icon { font-size: 56rpx; }
+.scan-tip-title { font-size: 30rpx; font-weight: 700; color: #b35c00; }
+.scan-tip-desc { font-size: 24rpx; color: #b07a3c; margin-top: 6rpx; }
+.scan-tip-btn {
+  flex-shrink: 0;
+  padding: 16rpx 30rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #ff8a5c, #ff6b35);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+}
 .shop-card {
   margin: 24rpx;
   padding: 32rpx;

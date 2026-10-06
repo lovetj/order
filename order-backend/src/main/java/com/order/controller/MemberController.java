@@ -4,6 +4,7 @@ import com.order.common.Result;
 import com.order.dto.MemberVO;
 import com.order.service.MemberService;
 import com.order.util.JwtUtil;
+import com.order.util.ShopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,12 +24,13 @@ public class MemberController {
     /** 会员信息（等级/积分/成长进度/优惠券数） */
     @GetMapping("/info")
     public Result<MemberVO> info(@RequestHeader(value = "Authorization", required = false) String authorization,
-                                 @RequestHeader(value = "userId", required = false) String headerUserId) {
+                                 @RequestHeader(value = "userId", required = false) String headerUserId,
+                                 @RequestHeader(value = ShopContext.SHOP_ID_HEADER, required = false) String headerShopId) {
         String userId = resolveUserId(authorization, headerUserId);
         if (userId == null) {
             return Result.error(401, "用户未登录，请先登录");
         }
-        return Result.success(memberService.getMemberInfo(userId));
+        return Result.success(memberService.getMemberInfo(userId, ShopContext.resolveCustomerShopId(headerShopId)));
     }
 
     private String resolveUserId(String authorization, String headerUserId) {

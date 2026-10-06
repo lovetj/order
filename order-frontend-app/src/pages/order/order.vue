@@ -1,6 +1,17 @@
 <template>
   <view class="container layout-page">
     <bottom-nav />
+    <!-- 未识别店铺/桌号时提示扫码 -->
+    <view v-if="needScan" class="scan-tip">
+      <view class="scan-tip-card">
+        <view class="scan-tip-icon">📷</view>
+        <view class="scan-tip-text">
+          <view class="scan-tip-title">请先扫描桌位二维码</view>
+          <view class="scan-tip-desc">未识别到店铺与桌号，无法查看订单</view>
+        </view>
+        <view class="scan-tip-btn" @click="scanThenReload">立即扫码</view>
+      </view>
+    </view>
     <view class="tabs layout-header">
       <view
         v-for="item in tabs"
@@ -51,6 +62,7 @@
 // 顾客端订单
 const app = getApp()
 import api from '@/api/index'
+import { hasCustomerContext, scanOrderContext } from '@/utils/scan'
 
 const TABS = [
   { key: 'all', name: '全部' },
@@ -65,7 +77,8 @@ export default {
       tabs: TABS,
       current: 'all',
       list: [],
-      loading: false
+      loading: false,
+      needScan: false
     }
   },
 
@@ -78,6 +91,8 @@ export default {
       uni.reLaunch({ url: '/pages/login/login?role=customer' })
       return
     }
+    this.needScan = !hasCustomerContext(app)
+    if (this.needScan) return
     this.loadList()
   },
 
@@ -85,6 +100,16 @@ export default {
     // 底部导航切换时刷新当前页面数据
     onTabRefresh() {
       if (!app.globalData.isLogin()) return
+      this.needScan = !hasCustomerContext(app)
+      if (this.needScan) return
+      this.loadList()
+    },
+
+    // 扫码识别店铺/桌号后刷新页面
+    async scanThenReload() {
+      const { ok } = await scanOrderContext(app)
+      if (!ok) return
+      this.needScan = false
       this.loadList()
     },
 
@@ -102,6 +127,7 @@ export default {
 
     switchTab(key) {
       this.current = key
+      if (this.needScan) return
       this.loadList()
     },
 
@@ -146,6 +172,44 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.scan-tip {
+  position: fixed;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.18);
+}
+.scan-tip-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  width: 100%;
+  max-width: 660rpx;
+  padding: 36rpx 30rpx;
+  border-radius: 24rpx;
+  background: #fff;
+  border: 1rpx solid #ffe2c0;
+  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.16);
+}
+.scan-tip-icon { font-size: 56rpx; }
+.scan-tip-title { font-size: 30rpx; font-weight: 700; color: #b35c00; }
+.scan-tip-desc { font-size: 24rpx; color: #b07a3c; margin-top: 6rpx; }
+.scan-tip-btn {
+  flex-shrink: 0;
+  padding: 16rpx 30rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #ff8a5c, #ff6b35);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+}
 .tabs {
   display: flex;
   background: #fff;

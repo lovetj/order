@@ -158,7 +158,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 3. 优惠券抵扣
         BigDecimal discount = BigDecimal.ZERO;
         if (StringUtils.hasText(dto.getUserCouponId())) {
-            discount = couponService.useCoupon(dto.getUserCouponId(), order.getId(), userId, productTotal);
+            discount = couponService.useCoupon(dto.getUserCouponId(), order.getId(), userId, productTotal, shopId);
         }
 
         // 4. 积分抵扣（100 积分 = 1 元）
@@ -173,7 +173,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                     .setScale(0, RoundingMode.DOWN).intValue();
             int usePoints = Math.min(dto.getUsePoints(), maxPoints);
             if (usePoints > 0) {
-                memberService.deductPoints(userId, usePoints);
+                memberService.deductPoints(userId, shopId, usePoints);
                 pointsDeduction = BigDecimal.valueOf(usePoints)
                         .divide(BigDecimal.valueOf(POINTS_PER_YUAN_DEDUCT), 2, RoundingMode.HALF_UP);
             }
@@ -203,14 +203,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
         }
 
-        return getDetail(order.getId());
+        return getDetail(order.getId(), shopId);
     }
 
     // ==================== 查询 ====================
 
     @Override
-    public PageResult<OrderVO> pageForCustomer(Integer pageNum, Integer pageSize, String status, String userId) {
-        return pageOrders(pageNum, pageSize, status, userId, null);
+    public PageResult<OrderVO> pageForCustomer(Integer pageNum, Integer pageSize, String status, String userId, String shopId) {
+        return pageOrders(pageNum, pageSize, status, userId, shopId);
     }
 
     @Override
@@ -245,9 +245,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public OrderVO getDetail(String id) {
+    public OrderVO getDetail(String id, String shopId) {
         Order order = findOrder(id);
-        return order == null ? null : toVOWithItems(order);
+        if (order == null) {
+            return null;
+        }
+        // 店铺隔离：顾客只能查看当前店铺的订单
+        if (StringUtils.hasText(shopId) && !shopId.equals(order.getShopId())) {
+            return null;
+        }
+        return toVOWithItems(order);
     }
 
     /**
@@ -270,7 +277,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public Map<String, Long> countByUser(String userId) {
+    public Map<String, Long> countByUser(String userId, String shopId) {
         Map<String, Long> result = new HashMap<>();
         result.put("pending", 0L);
         result.put("cooking", 0L);
@@ -280,7 +287,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (!StringUtils.hasText(userId)) {
             return result;
         }
-        List<Map<String, Object>> rows = baseMapper.countGroupByStatus(userId);
+        List<Map<String, Object>> rows = baseMapper.countGroupByStatus(userId, shopId);
         long total = 0L;
         for (Map<String, Object> row : rows) {
             Integer st = row.get("status") == null ? null : ((Number) row.get("status")).intValue();
@@ -343,7 +350,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setFinishTime(LocalDateTime.now());
         updateById(order);
         // 订单完成：累加会员积分与消费额、刷新等级
-        memberService.addOrderReward(order.getUserId(), order.getPayAmount());
+        memberService.addOrderReward(order.getUserId(), order.getShopId(), order.getPayAmount());
     }
 
     @Override
@@ -377,12 +384,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void cancel(String id, String userId, String reason) {
+    public void cancel(String id, String userId, String reason, String shopId) {
         Order order = findOrder(id);
         if (order == null) {
             throw new RuntimeException("订单不存在");
         }
         if (StringUtils.hasText(userId) && !userId.equals(order.getUserId())) {
+            throw new RuntimeException("无权操作该订单");
+        }
+        // 店铺隔离：顾客只能取消当前店铺的订单
+        if (StringUtils.hasText(shopId) && !shopId.equals(order.getShopId())) {
             throw new RuntimeException("无权操作该订单");
         }
         if (order.getStatus() == STATUS_DONE || order.getStatus() == STATUS_CANCELED) {

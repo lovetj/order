@@ -51,7 +51,7 @@ public interface CouponService extends IService<Coupon> {
      * @param amount       订单原始金额
      * @return 实际优惠金额
      */
-    BigDecimal useCoupon(String userCouponId, String orderId, String userId, BigDecimal amount);
+    BigDecimal useCoupon(String userCouponId, String orderId, String userId, BigDecimal amount, String shopId);
 
     /**
      * 订单取消时退回优惠券

@@ -265,7 +265,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
                 .last("LIMIT 5"));
         List<OrderVO> pendingVOs = new ArrayList<>();
         for (Order order : pendingOrders) {
-            OrderVO detail = orderService.getDetail(order.getId());
+            OrderVO detail = orderService.getDetail(order.getId(), shopId);
             if (detail != null) {
                 pendingVOs.add(detail);
             }

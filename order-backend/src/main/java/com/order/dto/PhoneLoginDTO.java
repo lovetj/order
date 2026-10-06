@@ -28,4 +28,10 @@ public class PhoneLoginDTO {
 
     /** 角色 customer / merchant，默认 customer */
     private String role;
+
+    /** 扫码桌位店铺ID（可选，用于登录时绑定三要素登录态） */
+    private String shopId;
+
+    /** 扫码桌位ID（可选，用于登录时绑定三要素登录态） */
+    private String tableId;
 }

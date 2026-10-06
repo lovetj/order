@@ -12,6 +12,7 @@ import com.order.dto.PhoneLoginDTO;
 import com.order.dto.WxLoginDTO;
 import com.order.entity.User;
 import com.order.mapper.UserMapper;
+import com.order.service.CustomerSessionService;
 import com.order.service.UserService;
 import com.order.util.FileUrlUtil;
 import com.order.util.JwtUtil;
@@ -34,6 +35,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private CustomerSessionService customerSessionService;
 
     @Autowired
     private WechatProperties wechatProperties;
@@ -164,6 +168,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         String role = StringUtils.hasText(dto.getRole()) ? dto.getRole() : "customer";
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), role);
+        // 三要素登录态：扫码上下文下将 token 绑定到 (user, shop, table)，TTL 见 customer.session.expire-seconds
+        if (customerSessionService.isEligible(user.getId(), dto.getShopId(), dto.getTableId())) {
+            customerSessionService.bindLogin(user.getId(), dto.getShopId(), dto.getTableId(), token);
+        }
 
         // 不下发敏感字段
         user.setPassword(null);
@@ -258,6 +266,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         String role = StringUtils.hasText(dto.getRole()) ? dto.getRole() : "customer";
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), role);
+        // 三要素登录态：扫码上下文下将 token 绑定到 (user, shop, table)，TTL 见 customer.session.expire-seconds
+        if (customerSessionService.isEligible(user.getId(), dto.getShopId(), dto.getTableId())) {
+            customerSessionService.bindLogin(user.getId(), dto.getShopId(), dto.getTableId(), token);
+        }
 
         // 不下发敏感字段
         user.setPassword(null);
