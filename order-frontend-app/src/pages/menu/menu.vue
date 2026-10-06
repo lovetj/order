@@ -202,11 +202,20 @@ export default {
 
     // 扫码识别店铺/桌号后刷新页面
     async scanThenReload() {
-      const { ok } = await scanOrderContext(app)
+      const { ok, shopChanged } = await scanOrderContext(app)
       if (!ok) return
       this.needScan = false
       this.resolveTableNo()
-      if (!this.categories.length) {
+      // 切换店铺：清空旧店分类与购物车缓存，强制重新拉取本店菜单
+      if (shopChanged) {
+        this.currentCategory = 'all'
+        this.showCart = false
+        this.cart = app.globalData.cart
+        this.cartList = []
+        this.cartCount = 0
+        this.cartAmount = 0
+        this.loadData()
+      } else if (!this.categories.length) {
         this.loadData()
       } else {
         this.loadList(true)

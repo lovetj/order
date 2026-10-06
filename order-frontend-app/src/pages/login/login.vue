@@ -239,7 +239,11 @@ export default {
       uni.showToast({ title: '登录成功', icon: 'success', duration: 700 })
       setTimeout(() => {
         // 深链扫码进来：登录后回点餐/首页并携带 shopId/tableId，复用已落好的缓存上下文
-        const back = app.globalData.__loginBack
+        // 注意：跳转登录页时 back 参数被 encodeURIComponent 编码，需先解码还原真实 URL 才能 reLaunch
+        let back = app.globalData.__loginBack || ''
+        if (back) {
+          try { back = decodeURIComponent(back) } catch (e) { /* 保持原值 */ }
+        }
         app.globalData.__loginBack = ''
         uni.reLaunch({ url: back || '/pages/index/index' })
         // 未识别店铺时提示扫码，避免点餐提交被后端拒绝

@@ -93,9 +93,9 @@ public class MemberServiceImpl implements MemberService {
             vo.setProgress(Math.max(0, Math.min(100, progress)));
         }
 
-        // 优惠券数量（会员中心为顾客维度，统计其全部店铺的券）
+        // 优惠券数量（按当前店铺隔离；无 shopId 时回退统计全部店铺）
         try {
-            Map<String, Long> counts = couponService.countMyCoupons(userId, null);
+            Map<String, Long> counts = couponService.countMyCoupons(userId, shopId);
             vo.setCouponCount(counts.getOrDefault("unused", 0L));
         } catch (Exception e) {
             vo.setCouponCount(0L);
@@ -191,3 +191,4 @@ public class MemberServiceImpl implements MemberService {
         return index;
     }
 }
+

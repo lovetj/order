@@ -144,9 +144,8 @@ export default {
     /** 选择本地图片并上传，成功后写入后端并刷新展示 */
     chooseAvatar() {
       if (this.uploadingAvatar) return
-      uni.chooseMedia({
+      uni.chooseImage({
         count: 1,
-        mediaType: ['image'],
         sourceType: ['album', 'camera'],
         sizeType: ['compressed'],
         success: (res) => {

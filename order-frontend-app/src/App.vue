@@ -29,6 +29,14 @@ export default {
       const shopId = query.shopId || ''
       const tableNo = query.tableNo || ''
       const tableId = query.tableId || ''
+      // 切换店铺：清空旧店缓存
+      if (shopId && this.shopId && String(shopId) !== String(this.shopId)) {
+        this.clearShopScopedCache()
+      }
+      // 桌位ID变化（换店或换桌）：清掉残留桌号，交由页面按新 tableId 反查
+      if (tableId && this.tableId && String(tableId) !== String(this.tableId)) {
+        this.setTableNo('')
+      }
       if (shopId) {
         this.setShopId(shopId)
       }
@@ -81,6 +89,16 @@ export default {
         uni.setStorageSync('tableId', tableId)
       } else {
         uni.removeStorageSync('tableId')
+      }
+    },
+
+    // 切换店铺时清空该店铺相关的内存缓存（购物车、会员信息），避免串店展示
+    clearShopScopedCache() {
+      this.cart = {}
+      this.userInfo = {
+        nickName: '用餐用户',
+        avatar: '🙋',
+        memberLevel: '普通会员'
       }
     },
 

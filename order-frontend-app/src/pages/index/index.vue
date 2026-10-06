@@ -52,7 +52,7 @@
 // 顾客端首页
 const app = getApp()
 import api from '@/api/index'
-import { hasCustomerContext, scanOrderContext, ensureCustomerContext } from '@/utils/scan'
+import { hasCustomerContext, scanOrderContext, ensureCustomerContext, resolveTableNo } from '@/utils/scan'
 
 export default {
   data() {
@@ -70,7 +70,9 @@ export default {
         { id: 3, emoji: '🔥', title: '招牌菜品 8 折', desc: '每日限量供应' }
       ],
       notices: [],
-      needScan: false
+      needScan: false,
+      // 记录已回查过桌号的桌位ID，避免重复请求；桌位变化时强制重新反查
+      _resolvedTableId: ''
     }
   },
 
@@ -88,17 +90,35 @@ export default {
     if (!app.globalData.isLogin()) return
     this.needScan = !hasCustomerContext(app)
     this.tableNo = app.globalData.tableNo || '未获取'
+    // 与点餐页一致：仅携带桌位ID时回查桌号，避免展示别的店的旧桌号
+    this.resolveTableNo()
     // 无店铺/桌位上下文时不发请求，仅提示扫码
     if (this.needScan) return
     this.loadShop()
   },
 
   methods: {
+    // 桌号回查：按桌位ID查询桌号；桌位变化时强制重新反查，避免展示旧桌号
+    resolveTableNo() {
+      const tableId = app.globalData.tableId || ''
+      if (!tableId) return
+      // 已有桌号且桌位未变化：无需重复反查
+      if (app.globalData.tableNo && this._resolvedTableId === tableId) return
+      this._resolvedTableId = tableId
+      api.getTableByCustomerId(tableId).then((t) => {
+        if (t && t.tableNo) {
+          app.globalData.setTableNo(t.tableNo)
+          this.tableNo = t.tableNo
+        }
+      }).catch(() => {})
+    },
+
     // 底部导航切换时刷新当前页面数据
     onTabRefresh() {
       if (!app.globalData.isLogin()) return
       this.needScan = !hasCustomerContext(app)
       this.tableNo = app.globalData.tableNo || '未获取'
+      this.resolveTableNo()
       // 无店铺/桌位上下文时不发请求，仅提示扫码
       if (this.needScan) return
       this.loadShop()
@@ -125,9 +145,12 @@ export default {
     async scanTable() {
       const { ok, tableNo } = await scanOrderContext(app)
       if (!ok) return
+      // 扫码后桌位可能变化，重置已回查标记，强制按新 tableId 反查桌号
+      this._resolvedTableId = ''
       this.tableNo = tableNo || app.globalData.tableNo || '未获取'
       this.needScan = false
-      // 切换店铺后重新加载本店菜单
+      this.resolveTableNo()
+      // 切换店铺后重新加载本店信息
       this.loadShop()
     },
 
