@@ -33,48 +33,6 @@
         <text class="notice-text">{{item}}</text>
       </view>
     </view>
-
-    <!-- 快捷入口 -->
-    <view class="quick">
-      <view class="quick-item" @click="goMenu">
-        <view class="quick-icon">🍽️</view>
-        <view class="quick-text">立即点餐</view>
-      </view>
-      <view class="quick-item" @click="goMenu">
-        <view class="quick-icon">🔥</view>
-        <view class="quick-text">热销榜单</view>
-      </view>
-      <view class="quick-item" @click="goOrders">
-        <view class="quick-icon">🧾</view>
-        <view class="quick-text">我的订单</view>
-      </view>
-      <view class="quick-item" @click="scanTable">
-        <view class="quick-icon">📷</view>
-        <view class="quick-text">扫码点餐</view>
-      </view>
-    </view>
-
-    <!-- 推荐菜品 -->
-    <view class="section">
-      <view class="section-head">
-        <view class="section-title">店长推荐</view>
-        <view class="section-more" @click="goMenu">全部 ›</view>
-      </view>
-      <view class="goods-grid">
-        <view class="goods-item" v-for="item in recommend" :key="item.id" @click="goMenu">
-          <view class="goods-img">
-            <image v-if="item.hasImage" class="goods-img-real" :src="item.imageUrl" mode="aspectFill"></image>
-            <text v-else>{{item.image}}</text>
-          </view>
-          <view class="goods-name ellipsis">{{item.name}}</view>
-          <view class="goods-desc ellipsis">{{item.desc}}</view>
-          <view class="goods-bottom">
-            <text class="price">¥{{item.price}}</text>
-            <text class="add-btn">＋</text>
-          </view>
-        </view>
-      </view>
-    </view>
     </scroll-view>
   </view>
 </template>
@@ -83,7 +41,6 @@
 // 顾客端首页
 const app = getApp()
 import api from '@/api/index'
-import { formatImageUrl } from '@/utils/util'
 
 export default {
   data() {
@@ -100,7 +57,6 @@ export default {
         { id: 2, emoji: '💰', title: '满 100 减 20', desc: '堂食全场通用' },
         { id: 3, emoji: '🔥', title: '招牌菜品 8 折', desc: '每日限量供应' }
       ],
-      recommend: [],
       notices: []
     }
   },
@@ -117,7 +73,6 @@ export default {
     }
     this.tableNo = app.globalData.tableNo || '未获取'
     this.loadShop()
-    this.loadRecommend()
   },
 
   methods: {
@@ -126,7 +81,6 @@ export default {
       if (!app.globalData.isLogin()) return
       this.tableNo = app.globalData.tableNo || '未获取'
       this.loadShop()
-      this.loadRecommend()
     },
 
     // 加载门店信息
@@ -147,18 +101,6 @@ export default {
       }).catch(() => {})
     },
 
-    // 加载店长推荐
-    loadRecommend() {
-      api.getRecommend(4).then((list) => {
-        const recommend = (list || []).map((g) => {
-          const img = g.image || ''
-          const hasImage = /^https?:\/\//.test(img) || img.startsWith('/')
-          return { ...g, hasImage, imageUrl: hasImage ? formatImageUrl(img) : '' }
-        })
-        this.recommend = recommend
-      }).catch(() => {})
-    },
-
     scanTable() {
       uni.scanCode({
         success: (res) => {
@@ -176,7 +118,6 @@ export default {
           })
           // 切换店铺后重新加载本店菜单
           this.loadShop()
-          this.loadRecommend()
         },
         fail: () => uni.showToast({ title: '扫码已取消', icon: 'none' })
       })
@@ -213,14 +154,6 @@ export default {
         result.tableNo = plain
       }
       return result
-    },
-
-    goMenu() {
-      uni.reLaunch({ url: '/pages/menu/menu' })
-    },
-
-    goOrders() {
-      uni.reLaunch({ url: '/pages/order/order' })
     }
   }
 }
@@ -328,114 +261,5 @@ export default {
   flex: 1;
   font-size: 25rpx;
   color: #666;
-}
-
-.quick {
-  display: flex;
-  background: #fff;
-  margin: 24rpx;
-  border-radius: 20rpx;
-  padding: 32rpx 0;
-}
-
-.quick-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.quick-icon {
-  font-size: 52rpx;
-}
-
-.quick-text {
-  font-size: 24rpx;
-  color: #555;
-  margin-top: 12rpx;
-}
-
-.section {
-  margin: 24rpx;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20rpx;
-}
-
-.section-title {
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.section-more {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.goods-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-
-.goods-item {
-  width: 48.5%;
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
-}
-
-.goods-img {
-  font-size: 90rpx;
-  text-align: center;
-  line-height: 1.4;
-  height: 180rpx;
-  border-radius: 16rpx;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f7f7f7;
-}
-
-.goods-img-real {
-  width: 100%;
-  height: 100%;
-}
-
-.goods-name {
-  font-size: 30rpx;
-  font-weight: 600;
-  margin-top: 12rpx;
-}
-
-.goods-desc {
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 8rpx;
-}
-
-.goods-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 16rpx;
-}
-
-.add-btn {
-  width: 48rpx;
-  height: 48rpx;
-  line-height: 44rpx;
-  text-align: center;
-  border-radius: 50%;
-  background: #ff6b35;
-  color: #fff;
-  font-size: 34rpx;
 }
 </style>

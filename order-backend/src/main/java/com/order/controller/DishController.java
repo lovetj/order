@@ -39,6 +39,16 @@ public class DishController {
         return Result.success(dishService.listForCustomer(shopId, categoryId, keyword));
     }
 
+    /** 顾客端：菜品分页列表（仅上架，按销量排序，限当前店铺） */
+    @GetMapping("/customer/page")
+    public Result<PageResult<DishVO>> customerPage(@RequestParam(required = false) String categoryId,
+                                                   @RequestParam(defaultValue = "1") Integer pageNum,
+                                                   @RequestParam(defaultValue = "10") Integer pageSize,
+                                                   @RequestHeader(value = ShopContext.SHOP_ID_HEADER, required = false) String headerShopId) {
+        String shopId = ShopContext.resolveCustomerShopId(headerShopId);
+        return Result.success(dishService.pageForCustomer(shopId, categoryId, pageNum, pageSize));
+    }
+
     /** 顾客端：首页店长推荐（热销，限当前店铺） */
     @GetMapping("/recommend")
     public Result<List<DishVO>> recommend(@RequestParam(defaultValue = "4") Integer limit,

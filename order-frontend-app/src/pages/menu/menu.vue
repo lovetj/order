@@ -7,7 +7,7 @@
         class="cat-item"
         :class="{ active: currentCategory === 'all' }"
         @click="switchCategory('all')"
-      >热销</view>
+      >全部</view>
       <view
         v-for="item in categories"
         :key="item.id"
@@ -18,32 +18,55 @@
     </scroll-view>
 
     <!-- 右侧商品 -->
-    <scroll-view class="goods-list" scroll-y>
-      <view class="goods-card" v-for="item in goodsList" :key="item.id">
-        <view class="goods-img">
-          <image v-if="item.hasImage" class="goods-img-real" :src="item.imageUrl" mode="aspectFill"></image>
+    <scroll-view
+      class="goods-list"
+      scroll-y
+      :lower-threshold="60"
+      @scrolltolower="loadMore"
+    >
+      <view class="goods-item" v-for="item in goodsList" :key="item.key || item.id">
+        <view class="thumb">
+          <image v-if="item.hasImage" class="thumb-img" :src="item.imageUrl" mode="aspectFill"></image>
           <text v-else>{{item.image}}</text>
         </view>
-        <view class="goods-main">
-          <view class="goods-name">{{item.name}}</view>
-          <view class="goods-desc">{{item.desc}}</view>
-          <view class="goods-sales">已售 {{item.sales}}</view>
-          <view class="goods-row">
+        <view class="info">
+          <view class="name-row">
+            <view class="name">{{item.name}}</view>
+            <view v-if="item.isHot" class="hot-tag">热销推荐</view>
+          </view>
+          <view class="desc">{{item.desc}}</view>
+          <view class="meta">
             <text class="price">¥{{item.price}}</text>
-            <view class="stepper">
-              <view v-if="item.count > 0" class="step-btn minus" @click="minusItem(item.key)">−</view>
-              <text v-if="item.count > 0" class="step-num">{{item.count}}</text>
-              <!-- 起购份数 > 1 时展示「*份起购」，否则展示加号 -->
-              <view
-                v-if="item.minBuy > 1"
-                class="min-buy-tag"
-                @click="addItem(item.id)"
-              >{{item.minBuy}}份起购</view>
-              <view v-else class="step-btn plus" @click="addItem(item.id)">＋</view>
-            </view>
+            <text v-if="item.minBuy > 1" class="minbuy-tag">{{item.minBuy}}份起购</text>
+            <text class="sales">已售 {{item.sales || 0}}</text>
+          </view>
+          <view class="ops">
+            <view v-if="item.count > 0" class="step-btn minus" @click="minusItem(item.key)">−</view>
+            <text v-if="item.count > 0" class="step-num">{{item.count}}</text>
+            <view v-if="item.minBuy > 1" class="min-buy-btn" @click="addItem(item.id)">{{item.minBuy}}份起购</view>
+            <view v-else class="step-btn plus" @click="addItem(item.id)">＋</view>
           </view>
         </view>
       </view>
+
+      <!-- 无数据 -->
+      <view v-if="!listLoading && goodsList.length === 0" class="empty">该分类暂无在售菜品</view>
+
+      <!-- 首屏加载 -->
+      <view v-if="listLoading" class="list-loading">
+        <view class="mini-spinner"></view>
+        <text class="list-loading-text">加载中…</text>
+      </view>
+
+      <!-- 下拉加载更多 -->
+      <view v-if="!listLoading && loadingMore" class="list-loading list-loading-more">
+        <view class="mini-spinner"></view>
+        <text class="list-loading-text">加载中…</text>
+      </view>
+
+      <!-- 到底了 -->
+      <view v-if="!listLoading && !loadingMore && !hasMore && goodsList.length > 0" class="list-end">到底了</view>
+
       <view class="bottom-space"></view>
     </scroll-view>
 
@@ -99,9 +122,14 @@ export default {
   data() {
     return {
       categories: [],
-      goods: [],
-      currentCategory: '',
+      currentCategory: 'all',
       goodsList: [],
+      // 分页加载状态
+      currentPage: 1,
+      pageSize: 10,
+      hasMore: true,
+      listLoading: false,   // 首屏 / 切换分类加载
+      loadingMore: false,   // 触底追加加载
       cart: {},          // { dishId: count }
       cartList: [],
       cartCount: 0,
@@ -123,7 +151,7 @@ export default {
       this.loadData()
     } else {
       // 回到页面时同步后端最新菜品（价格/库存可能变化）
-      this.loadGoods()
+      this.loadList(true)
     }
   },
 
@@ -134,34 +162,23 @@ export default {
       if (!this.categories.length) {
         this.loadData()
       } else {
-        this.loadGoods()
+        this.loadList(true)
       }
     },
 
-    // 加载分类 + 全部菜品 + 规格标记
+    // 加载分类 + 第一页菜品
     loadData() {
-      Promise.all([api.getCategories(), api.getDishes({ categoryId: 'all' })]).then(([categories, goods]) => {
-        const firstId = categories && categories.length ? categories[0].id : 'all'
-        this.categories = categories || []
-        this.goods = (goods || []).map((g) => this.decorateImage(g))
-        this.currentCategory = firstId
-        this.buildList()
-        this.markSpecDishes()
-      }).catch(() => {
-        this.categories = []
-        this.goods = []
-      })
+      this.categories = []
+      this.loadCategories()
+      this.loadList(true)
     },
 
-    /**
-     * 标记哪些菜品带规格（带规格的点击 + 需弹窗选择）
-     * 后端列表接口不返回 specs，这里逐个查询详情较重，
-     * 优化方案：由后端在列表接口返回 hasSpec 字段；当前先按需懒加载
-     */
-    markSpecDishes() {
-      // 简洁做法：列表接口暂不含 specs，用户点 + 时统一走规格页，
-      // 规格页无规格时直接返回并加入购物车。
-      this.dishHasSpec = {}
+    loadCategories() {
+      api.getCategories().then((categories) => {
+        this.categories = categories || []
+      }).catch(() => {
+        this.categories = []
+      })
     },
 
     /**
@@ -174,39 +191,67 @@ export default {
       return { ...g, hasImage, imageUrl: hasImage ? formatImageUrl(img) : '' }
     },
 
-    // 仅刷新菜品（保留分类与购物车）
-    loadGoods() {
-      api.getDishes({ categoryId: 'all' }).then((goods) => {
-        this.goods = (goods || []).map((g) => this.decorateImage(g))
-        this.buildList()
-      }).catch(() => {})
+    // 分页查询：reset=true 重新加载第一页，否则追加一页
+    loadList(reset) {
+      if (reset) {
+        if (this.listLoading) return
+        this.listLoading = true
+        this.currentPage = 1
+        this.hasMore = true
+      } else {
+        if (this.listLoading || this.loadingMore) return
+        this.loadingMore = true
+      }
+      const params = {
+        pageNum: this.currentPage,
+        pageSize: this.pageSize,
+        categoryId: this.currentCategory === 'all' ? null : this.currentCategory
+      }
+      api.customerPageDishes(params).then((page) => {
+        const records = ((page && page.records) || []).map((g) => {
+          // 列表行减号使用的购物车 key：无规格菜品的主条目为「id|」
+          const decorated = this.decorateImage(g)
+          return { ...decorated, key: `${g.id}|` }
+        })
+        this.goodsList = reset ? records : this.goodsList.concat(records)
+        this.hasMore = this.currentPage < ((page && page.pages) || 0)
+        this.currentPage += 1
+        this.listLoading = false
+        this.loadingMore = false
+        // 用当前购物车刷新列表角标
+        this.syncCartCounts()
+      }).catch(() => {
+        this.listLoading = false
+        this.loadingMore = false
+      })
     },
 
-    buildList() {
-      const { goods, currentCategory, cart } = this
-      const list = (currentCategory === 'all'
-        ? [...goods].sort((a, b) => (b.sales || 0) - (a.sales || 0))
-        : goods.filter((g) => g.categoryId === currentCategory))
-        // 只展示上架菜品
-        .filter((g) => g.status)
+    // 切换分类：重置到顶部并按新分类加载第一页
+    switchCategory(id) {
+      if (this.currentCategory === id) return
+      this.currentCategory = id
+      this.loadList(true)
+    },
 
-      // 购物车 key 为「dishId|specText」，此处按 dishId 汇总每种菜品的总份数
+    // 触底加载下一页（scroll-view scrolltolower 触发）
+    loadMore() {
+      if (this.listLoading || this.loadingMore || !this.hasMore) return
+      this.loadList(false)
+    },
+
+    // 用购物车份数刷新列表角标
+    syncCartCounts() {
+      const { cart, goodsList } = this
       const countByDish = {}
       Object.keys(cart).forEach((key) => {
         const entry = cart[key]
         if (!entry) return
         countByDish[entry.id] = (countByDish[entry.id] || 0) + entry.count
       })
-
-      this.goodsList = list.map((g) => ({
+      this.goodsList = goodsList.map((g) => ({
         ...g,
         count: countByDish[g.id] || 0
       }))
-    },
-
-    switchCategory(id) {
-      this.currentCategory = id
-      this.buildList()
     },
 
     /**
@@ -232,7 +277,7 @@ export default {
      * 购物车 key = dishId + '|' + specText（同菜品不同规格视为不同条目）
      */
     addToCart(dishId, quantity, specIds, specText, extraPrice) {
-      const dish = this.goods.find((g) => g.id === dishId)
+      const dish = this.goodsList.find((g) => g.id === dishId)
       if (!dish) return
       const unitPrice = Number(dish.price) + (Number(extraPrice) || 0)
       const key = dishId + '|' + (specText || '')
@@ -393,26 +438,32 @@ export default {
   display: flex;
   background: #f6f7fb;
   padding-bottom: 110rpx;
+  box-sizing: border-box;
+  min-height: 0;
+  /* #ifdef H5 */
+  height: calc(100vh - 44px - env(safe-area-inset-top));
+  /* #endif */
 }
 
 .cat-list {
-  width: 190rpx;
+  width: 180rpx;
   height: 100%;
-  background: #f0f1f5;
+  background: #f0f1f3;
+  flex-shrink: 0;
 }
 
 .cat-item {
-  padding: 36rpx 16rpx;
-  font-size: 26rpx;
-  color: #666;
+  padding: 32rpx 16rpx;
+  font-size: 27rpx;
+  color: #555;
   text-align: center;
+  position: relative;
 }
 
 .cat-item.active {
   background: #fff;
-  color: #ff6b35;
+  color: #2f80ed;
   font-weight: 600;
-  position: relative;
 }
 
 .cat-item.active::before {
@@ -421,82 +472,131 @@ export default {
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 8rpx;
-  height: 40rpx;
-  background: #ff6b35;
-  border-radius: 0 8rpx 8rpx 0;
+  width: 6rpx;
+  height: 36rpx;
+  background: #2f80ed;
+  border-radius: 0 6rpx 6rpx 0;
 }
 
 .goods-list {
   flex: 1;
   height: 100%;
-  padding: 20rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
-.goods-card {
+.goods-item {
   display: flex;
+  align-items: center;
   background: #fff;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  margin-bottom: 20rpx;
+  padding: 24rpx 20rpx;
+  margin: 16rpx 0;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.04);
 }
 
-.goods-img {
-  width: 140rpx;
-  height: 140rpx;
+.thumb {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 14rpx;
   background: #fff1eb;
-  border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 72rpx;
-  margin-right: 24rpx;
-  overflow: hidden;
+  font-size: 60rpx;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-.goods-img-real {
+.thumb-img {
   width: 100%;
   height: 100%;
 }
 
-.goods-main {
+.info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  min-width: 0;
+  margin-left: 18rpx;
 }
 
-.goods-name {
+/* 名称与热销标签同一行 */
+.name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+/* 商品名称最多显示两行，超出省略 */
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 29rpx;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+/* 商品描述最多显示两行，超出省略 */
+.desc {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+/* 热销推荐标记 */
+.hot-tag {
+  flex-shrink: 0;
+  padding: 1rpx 10rpx;
+  font-size: 20rpx;
+  color: #ff6b35;
+  background: #fff1ea;
+  border-radius: 6rpx;
+}
+
+.meta {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.meta .price {
   font-size: 30rpx;
+  color: #ff6b35;
   font-weight: 600;
 }
 
-.goods-desc {
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 8rpx;
-}
-
-.goods-sales {
+.sales {
   font-size: 22rpx;
   color: #bbb;
-  margin-top: 8rpx;
 }
 
-.goods-row {
+/* 起购份数标记（大于 1 时展示） */
+.minbuy-tag {
+  font-size: 20rpx;
+  color: #ff6b35;
+  background: #fff1ea;
+  border-radius: 6rpx;
+  padding: 2rpx 12rpx;
+}
+
+/* 底部操作行：减号 / 数量 / 加号 */
+.ops {
+  margin-top: 16rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-}
-
-.goods-row .price {
-  font-size: 34rpx;
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
+  gap: 12rpx;
 }
 
 .step-btn {
@@ -520,19 +620,21 @@ export default {
   color: #666;
 }
 
-.stepper.small .step-btn {
-  width: 44rpx;
-  height: 44rpx;
-  font-size: 30rpx;
-}
-
 .step-num {
   min-width: 56rpx;
   text-align: center;
   font-size: 30rpx;
 }
 
-.min-buy-tag {
+/* 购物车面板内的步进器：按钮更小更紧凑 */
+.stepper.small .step-btn {
+  width: 44rpx;
+  height: 44rpx;
+  font-size: 30rpx;
+}
+
+/* 起购份数 > 1 时以按钮形式加入购物车 */
+.min-buy-btn {
   height: 52rpx;
   padding: 0 24rpx;
   border-radius: 999rpx;
@@ -542,6 +644,57 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.empty {
+  text-align: center;
+  color: #8a8a8a;
+  font-size: 26rpx;
+  padding: 120rpx 0;
+}
+
+/* 列表加载状态：首屏 / 下拉加载更多 */
+.list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+  color: #8a8a8a;
+}
+
+.list-loading.list-loading-more {
+  padding: 30rpx 0;
+}
+
+.list-loading-text {
+  font-size: 26rpx;
+  margin-left: 16rpx;
+}
+
+.mini-spinner {
+  width: 34rpx;
+  height: 34rpx;
+  border: 4rpx solid rgba(0, 0, 0, 0.14);
+  border-top-color: #2f80ed;
+  border-radius: 50%;
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
+/* 到底了 */
+.list-end {
+  text-align: center;
+  color: #b8b8b8;
+  font-size: 24rpx;
+  padding: 30rpx 0;
+}
+
+@keyframes spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .bottom-space {

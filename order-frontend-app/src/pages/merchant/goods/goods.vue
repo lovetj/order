@@ -24,6 +24,38 @@
         />
         <text v-if="keyword" class="search-clear" @click="clearSearch">×</text>
       </view>
+
+      <!-- 筛选：上下架状态 + 是否热销 -->
+      <view class="filter-bar">
+        <view class="filter-group">
+          <view
+            class="filter-chip" :class="{ active: statusFilter === 0 }"
+            @click="switchStatus(0)"
+          >全部</view>
+          <view
+            class="filter-chip on" :class="{ active: statusFilter === 1 }"
+            @click="switchStatus(1)"
+          >上架</view>
+          <view
+            class="filter-chip off" :class="{ active: statusFilter === 2 }"
+            @click="switchStatus(2)"
+          >下架</view>
+        </view>
+        <view class="filter-group">
+          <view
+            class="filter-chip" :class="{ active: hotFilter === 0 }"
+            @click="switchHot(0)"
+          >全部</view>
+          <view
+            class="filter-chip hot" :class="{ active: hotFilter === 1 }"
+            @click="switchHot(1)"
+          >热销</view>
+          <view
+            class="filter-chip" :class="{ active: hotFilter === 2 }"
+            @click="switchHot(2)"
+          >非热销</view>
+        </view>
+      </view>
     </view>
 
     <!-- 双栏主体：左分类 / 右商品，各自独立滚动 -->
@@ -170,6 +202,9 @@ export default {
       activeCategory: 'all',
       list: [],
       keyword: '',
+      // 筛选：statusFilter 0=全部 1=上架 2=下架；hotFilter 0=全部 1=热销 2=非热销
+      statusFilter: 0,
+      hotFilter: 0,
       totalCount: 0,
       onShelfCount: 0,
       // 分页加载状态
@@ -262,7 +297,9 @@ export default {
         pageNum: this.currentPage,
         pageSize: this.pageSize,
         categoryId: this.activeCategory === 'all' ? null : this.activeCategory,
-        keyword: (this.keyword || '').trim() || null
+        keyword: (this.keyword || '').trim() || null,
+        status: this.statusFilter === 0 ? null : (this.statusFilter === 1 ? 1 : 0),
+        isHot: this.hotFilter === 0 ? null : (this.hotFilter === 1 ? 1 : 0)
       }
       api.pageAdminDishes(params).then((page) => {
         const records = ((page && page.records) || []).map((g) => this.mapItem(g))
@@ -410,6 +447,22 @@ export default {
     // 清空搜索
     clearSearch() {
       this.keyword = ''
+      this.rollTopMain()
+      this.loadList(true)
+    },
+
+    // 切换上下架筛选
+    switchStatus(v) {
+      if (this.statusFilter === v) return
+      this.statusFilter = v
+      this.rollTopMain()
+      this.loadList(true)
+    },
+
+    // 切换热销筛选
+    switchHot(v) {
+      if (this.hotFilter === v) return
+      this.hotFilter = v
       this.rollTopMain()
       this.loadList(true)
     },
@@ -660,6 +713,47 @@ export default {
   color: #bbb;
   padding: 0 6rpx;
   line-height: 1;
+}
+
+/* ---------- 筛选栏：上下架状态 + 热销 ---------- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24rpx 16rpx;
+  background: #fff;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.filter-chip {
+  padding: 8rpx 26rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #666;
+  background: #f2f3f5;
+  line-height: 1.6;
+}
+
+.filter-chip.active {
+  color: #fff;
+  background: #2f80ed;
+}
+
+.filter-chip.on.active {
+  background: #34c759;
+}
+
+.filter-chip.off.active {
+  background: #999;
+}
+
+.filter-chip.hot.active {
+  background: #ff6b35;
 }
 
 /* ---------- 主体：左分类 / 右商品 ---------- */

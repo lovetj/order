@@ -5,8 +5,10 @@ import { baseUrl } from '../utils/config'
 
 export default {
   // ==================== 登录 / 用户 ====================
-  // 顾客端：昵称+头像快速登录（后端接口沿用 /api/user/wx-login，未配置 appId 时走 Mock 模式，任意非空 code 均可）
-  login: (data) => http.post('/api/user/wx-login', data),
+  // 顾客端：手机号登录（小程序端 getPhoneNumber 授权 / H5 手动输入手机号）
+  login: (data) => http.post('/api/user/phone-login', data),
+  // 顾客端：微信 openid 登录（保留兼容，一般不再使用）
+  wxLogin: (data) => http.post('/api/user/wx-login', data),
   // 当前用户信息
   getUserInfo: () => http.get('/api/user/info'),
   // 更新用户资料
@@ -37,6 +39,8 @@ export default {
 
   // ==================== 菜品（顾客端） ====================
   getDishes: (params) => http.get('/api/dish/list', params || {}),
+  // 顾客端分页（仅上架，按销量排序）
+  customerPageDishes: (params) => http.get('/api/dish/customer/page', params || {}),
   getRecommend: (limit = 4) => http.get('/api/dish/recommend', { limit }),
   getDishDetail: (id) => http.get(`/api/dish/${id}`),
 

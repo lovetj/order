@@ -6,36 +6,51 @@
     <view class="hero">
       <view class="logo">{{role === 'merchant' ? '🏪' : '🍔'}}</view>
       <view class="title">{{role === 'merchant' ? '店家登录' : '欢迎光临'}}</view>
-      <view class="subtitle">{{role === 'merchant' ? '请使用店家账号密码登录' : '填写昵称即可快速登录'}}</view>
+      <view class="subtitle">{{role === 'merchant' ? '请使用店家账号密码登录' : '使用手机号即可登录'}}</view>
       <view v-if="tableNo" class="table-tag">当前桌号：{{tableNo}}</view>
     </view>
 
-    <!-- ==================== 顾客端：昵称+头像快速登录 ==================== -->
+    <!-- ==================== 顾客端：手机号登录 ==================== -->
     <view v-if="role === 'customer'" class="panel">
-      <view class="avatar-row">
-        <view class="avatar-btn" @click="chooseAvatar">
-          <image v-if="avatarUrl" class="avatar-img" :src="avatarUrl" mode="aspectFill" />
-          <view v-else class="avatar-placeholder">＋</view>
+      <!-- 小程序端：优先微信手机号授权自动获取，拒绝/失败后回退手动输入 -->
+      <!-- #ifdef MP-WEIXIN -->
+      <template v-if="!manualPhone">
+        <button
+          class="submit-btn guest-btn"
+          open-type="getPhoneNumber"
+          :loading="logging"
+          @getphonenumber="onGetPhoneNumber"
+        >
+          <text class="quick-icon">📱</text> 手机号一键登录
+        </button>
+        <view class="hint">授权后将自动获取您的微信绑定手机号，首次自动创建账号</view>
+        <view class="manual-link" @click="switchToManual">无法授权？点此手动输入手机号</view>
+      </template>
+      <!-- #endif -->
+
+      <!-- 手动输入手机号（H5 端默认 / 小程序端授权失败后回退） -->
+      <template v-if="manualPhone">
+        <view class="field">
+          <view class="field-label">手机号</view>
+          <input
+            class="field-input"
+            type="number"
+            maxlength="11"
+            name="tel"
+            autocomplete="tel"
+            placeholder="请输入手机号"
+            :value="phone"
+            @input="onPhoneInput"
+          />
         </view>
-        <view class="avatar-tip">点击选择头像</view>
-      </view>
-
-      <view class="field">
-        <view class="field-label">昵称</view>
-        <input
-          class="field-input"
-          placeholder="请输入昵称"
-          :value="nickName"
-          @input="onNicknameInput"
-          @blur="onNicknameInput"
-        />
-      </view>
-
-      <button class="submit-btn guest-btn" :loading="logging" @click="customerLogin">
-        <text class="quick-icon">🚀</text> 一键登录
-      </button>
-
-      <view class="hint">首次登录将自动创建账号，无需单独注册</view>
+        <button class="submit-btn guest-btn" :loading="logging" @click="customerLogin">
+          <text class="quick-icon">📱</text> 手机号登录
+        </button>
+        <view class="hint">首次登录将自动创建账号，无需单独注册</view>
+        <!-- #ifdef MP-WEIXIN -->
+        <view class="manual-link" @click="manualPhone = false">使用微信手机号授权登录</view>
+        <!-- #endif -->
+      </template>
     </view>
 
     <!-- ==================== 店家端：账号密码登录 ==================== -->
@@ -76,11 +91,15 @@
 
 <script>
 // 登录页
-// 顾客端：昵称+头像快速登录（本地设备标识作为登录凭证，后端接口沿用 /api/user/wx-login）
+// 顾客端：手机号登录（能自动获取就自动获取，不行则手动输入，兼容安卓/苹果/鸿蒙）
+//   小程序端：微信 getPhoneNumber 授权按钮自动获取微信绑定手机号；用户拒绝授权时回退手动输入
+//   H5 端：浏览器无公开 API 自动读手机号，默认手动输入，并记忆上次手机号便于快速登录
 // 店家端：账号密码登录（不提供注册）
 const app = getApp()
 import api from '@/api/index'
 import { setToken } from '@/utils/request'
+
+const STORAGE_LAST_PHONE = 'lastPhone'
 
 export default {
   data() {
@@ -89,9 +108,9 @@ export default {
       role: 'customer',
       tableNo: '',
       logging: false,
-      // 顾客端：头像昵称
-      avatarUrl: '',
-      nickName: '',
+      // 顾客端：是否回退为手动输入（H5 默认手动；小程序默认自动授权）
+      manualPhone: false,
+      phone: '',
       // 店家端：账号密码
       username: '',
       password: '',
@@ -104,6 +123,16 @@ export default {
     const role = (options && options.role) === 'merchant' ? 'merchant' : 'customer'
     this.role = role
     this.tableNo = app.globalData.tableNo || ''
+
+    // #ifdef MP-WEIXIN
+    // 小程序端优先自动授权
+    this.manualPhone = false
+    // #endif
+    // #ifndef MP-WEIXIN
+    // H5 端只能手动输入，回填上次登录手机号
+    this.manualPhone = true
+    this.phone = uni.getStorageSync(STORAGE_LAST_PHONE) || ''
+    // #endif
   },
 
   methods: {
@@ -111,20 +140,14 @@ export default {
       uni.reLaunch({ url: '/pages/role/role' })
     },
 
-    // 从相册选择头像（跨端通用）
-    chooseAvatar() {
-      uni.chooseImage({
-        count: 1,
-        sizeType: ['compressed'],
-        success: (res) => {
-          const path = res.tempFilePaths && res.tempFilePaths[0]
-          if (path) this.avatarUrl = path
-        }
-      })
+    switchToManual() {
+      this.manualPhone = true
+      // 回填上次登录手机号，减少输入成本
+      this.phone = uni.getStorageSync(STORAGE_LAST_PHONE) || ''
     },
 
-    onNicknameInput(e) {
-      this.nickName = (e.detail.value || '').trim()
+    onPhoneInput(e) {
+      this.phone = (e.detail.value || '').trim()
     },
 
     onUsernameInput(e) {
@@ -140,86 +163,75 @@ export default {
       this.showPassword = !this.showPassword
     },
 
-    // ==================== 顾客端：快速登录 ====================
-    customerLogin() {
+    // ==================== 顾客端：小程序手机号授权登录（自动获取） ====================
+    onGetPhoneNumber(e) {
       if (this.logging) return
-      const nick = (this.nickName || '').trim()
-      if (!nick) {
-        uni.showToast({ title: '请输入昵称', icon: 'none' })
+      const detail = (e && e.detail) || {}
+      // 用户拒绝授权 / 授权失败 -> 回退手动输入
+      if (!detail.code) {
+        const errMsg = detail.errMsg || ''
+        if (errMsg.indexOf('deny') > -1 || errMsg.indexOf('fail') > -1) {
+          this.switchToManual()
+          uni.showToast({ title: '授权未通过，请手动输入手机号', icon: 'none' })
+        }
         return
       }
       this.logging = true
-
-      // 本地生成稳定的设备标识作为登录凭证（后端 Mock 模式下任意非空 code 均可建档）
+      // 授权 code 交给后端换取真实手机号并建档/登录
       api.login({
-        code: this.getDeviceCode(),
-        nickname: nick,
-        avatar: '',
+        phoneCode: detail.code,
         role: 'customer'
-      }).then((data) => {
-        // 先写入 token，后续头像上传需要鉴权
-        setToken(data.token)
-        const user = data.user || {}
-
-        // 本地选择的是临时路径，需上传到后端持久化
-        return this.uploadAvatarIfNeeded().then((avatarUrl) => {
-          if (avatarUrl) {
-            user.avatar = avatarUrl
-            // 同步更新后端用户资料
-            api.updateProfile({ nickname: user.nickname, avatar: avatarUrl }).catch(() => {})
-          }
-          app.globalData.userInfo = {
-            nickName: user.nickname || nick,
-            avatar: avatarUrl || user.avatar || '🙋',
-            memberLevel: user.memberLevel || '普通会员'
-          }
-          app.globalData.admin = null
-          app.globalData.setRole('customer')
+      }).then((data) => this.handleLoginSuccess(data))
+        .catch((err) => {
           this.logging = false
-          uni.showToast({ title: '登录成功', icon: 'success', duration: 700 })
-          setTimeout(() => {
-            uni.reLaunch({ url: '/pages/index/index' })
-            // 未识别店铺时提示扫码，避免点餐提交被后端拒绝
-            if (!app.globalData.shopId) {
-              setTimeout(() => {
-                uni.showToast({ title: '请扫描桌位二维码以识别店铺', icon: 'none', duration: 2000 })
-              }, 800)
-            }
-          }, 700)
+          uni.showToast({ title: (err && err.message) || '登录失败', icon: 'none' })
         })
-      }).catch((err) => {
-        this.logging = false
-        uni.showToast({ title: (err && err.message) || '登录失败', icon: 'none' })
-      })
     },
 
-    // 生成/读取本地设备标识（首次生成后持久化，保证同一设备账号稳定）
-    getDeviceCode() {
-      let code = uni.getStorageSync('deviceCode')
-      if (!code) {
-        code = 'device_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10)
-        uni.setStorageSync('deviceCode', code)
+    // ==================== 顾客端：手动输入手机号登录（H5 / 授权失败回退） ====================
+    customerLogin() {
+      if (this.logging) return
+      const phone = (this.phone || '').trim()
+      if (!phone) {
+        uni.showToast({ title: '请输入手机号', icon: 'none' })
+        return
       }
-      return code
+      if (!/^1\d{10}$/.test(phone)) {
+        uni.showToast({ title: '手机号格式不正确', icon: 'none' })
+        return
+      }
+      // 记忆手机号，下次自动回填
+      uni.setStorageSync(STORAGE_LAST_PHONE, phone)
+      this.logging = true
+      api.login({ phone, role: 'customer' }).then((data) => this.handleLoginSuccess(data))
+        .catch((err) => {
+          this.logging = false
+          uni.showToast({ title: (err && err.message) || '登录失败', icon: 'none' })
+        })
     },
 
-    /**
-     * 上传本地选择头像到后端（临时路径无法长期使用）
-     * @returns {Promise<string>} 后端返回的持久化头像地址，失败返回空串
-     */
-    uploadAvatarIfNeeded() {
-      const avatarUrl = this.avatarUrl
-      if (!avatarUrl) {
-        return Promise.resolve('')
+    // 登录成功统一处理：写入 token、同步全局用户信息、跳转首页
+    handleLoginSuccess(data) {
+      setToken(data.token)
+      const user = data.user || {}
+      app.globalData.userInfo = {
+        nickName: user.nickname || '手机用户',
+        avatar: user.avatar || '🙋',
+        memberLevel: user.memberLevel || '普通会员'
       }
-      // 已是远端完整地址（http/https 开头）则无需再上传
-      const isRemote = /^https?:\/\//i.test(avatarUrl)
-      if (isRemote) {
-        return Promise.resolve(avatarUrl)
-      }
-      return api.uploadFile(avatarUrl, 'avatar')
-        .then((data) => (data && (data.url || data.relativePath)) || '')
-        .catch(() => '')
+      app.globalData.admin = null
+      app.globalData.setRole('customer')
+      this.logging = false
+      uni.showToast({ title: '登录成功', icon: 'success', duration: 700 })
+      setTimeout(() => {
+        uni.reLaunch({ url: '/pages/index/index' })
+        // 未识别店铺时提示扫码，避免点餐提交被后端拒绝
+        if (!app.globalData.shopId) {
+          setTimeout(() => {
+            uni.showToast({ title: '请扫描桌位二维码以识别店铺', icon: 'none', duration: 2000 })
+          }, 800)
+        }
+      }, 700)
     },
 
     // ==================== 店家端：账号密码登录 ====================
@@ -313,48 +325,6 @@ export default {
   box-shadow: 0 10rpx 36rpx rgba(0, 0, 0, 0.06);
 }
 
-/* ---------- 顾客端头像授权 ---------- */
-.avatar-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 44rpx;
-}
-
-.avatar-btn {
-  width: 160rpx;
-  height: 160rpx;
-  padding: 0;
-  border-radius: 50%;
-  background: #f5f6f8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  line-height: 1;
-}
-
-.avatar-btn::after {
-  border: none;
-}
-
-.avatar-img {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 50%;
-}
-
-.avatar-placeholder {
-  font-size: 64rpx;
-  color: #c8c8c8;
-}
-
-.avatar-tip {
-  margin-top: 18rpx;
-  font-size: 24rpx;
-  color: #8a8a8a;
-}
-
 /* ---------- 表单 ---------- */
 .field {
   margin-bottom: 34rpx;
@@ -437,5 +407,12 @@ export default {
   font-size: 22rpx;
   color: #b0b0b0;
   line-height: 1.6;
+}
+
+.manual-link {
+  margin-top: 30rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #ff8900;
 }
 </style>

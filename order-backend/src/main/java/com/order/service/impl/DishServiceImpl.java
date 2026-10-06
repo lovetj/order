@@ -41,13 +41,25 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     }
 
     @Override
+    public PageResult<DishVO> pageForCustomer(String shopId, String categoryId, int pageNum, int pageSize) {
+        int num = pageNum > 0 ? pageNum : 1;
+        int size = pageSize > 0 ? pageSize : 10;
+        Page<Dish> page = new Page<>(num, size);
+        // status=1 表示仅上架，isDel=0 表示未删除
+        IPage<Dish> result = baseMapper.selectPageCustomer(
+                page, shopId, normalizeCategory(categoryId), 1, 0);
+        List<DishVO> records = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
+        return new PageResult<>(records, result.getTotal(), result.getPages(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
     public PageResult<DishVO> pageForAdmin(String shopId, PageDTO pageDTO) {
         PageDTO query = pageDTO != null ? pageDTO : new PageDTO();
         int pageNum = query.getPageNum() != null && query.getPageNum() > 0 ? query.getPageNum() : 1;
         int pageSize = query.getPageSize() != null && query.getPageSize() > 0 ? query.getPageSize() : 10;
         Page<Dish> page = new Page<>(pageNum, pageSize);
         IPage<Dish> result = baseMapper.selectPageWithCategory(
-                page, shopId, normalizeCategory(query.getCategoryId()), query.getKeyword(), query.getStatus(), 0);
+                page, shopId, normalizeCategory(query.getCategoryId()), query.getKeyword(), query.getStatus(), query.getIsHot(), 0);
         List<DishVO> records = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return new PageResult<>(records, result.getTotal(), result.getPages(), result.getCurrent(), result.getSize());
     }

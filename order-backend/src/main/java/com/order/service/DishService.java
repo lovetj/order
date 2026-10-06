@@ -21,6 +21,14 @@ public interface DishService extends IService<Dish> {
     List<DishVO> listForCustomer(String shopId, String categoryId, String keyword);
 
     /**
+     * 顾客端菜品分页列表（仅上架，按销量排序），按店铺隔离
+     *
+     * @param shopId     所属店铺
+     * @param categoryId 分类ID，为空或 all 表示全部
+     */
+    PageResult<DishVO> pageForCustomer(String shopId, String categoryId, int pageNum, int pageSize);
+
+    /**
      * 管理端菜品分页列表（含下架），按店铺隔离
      */
     PageResult<DishVO> pageForAdmin(String shopId, PageDTO pageDTO);

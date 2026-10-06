@@ -78,7 +78,7 @@ CREATE TABLE `user` (
   `id` varchar(128) NOT NULL COMMENT '主键ID',
   `username` varchar(64) NOT NULL COMMENT '用户名',
   `password` varchar(100) DEFAULT NULL COMMENT '密码(微信免密用户可为空)',
-  `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
+  `phone` varchar(20) DEFAULT NULL COMMENT '手机号(顾客登录标识，手机号登录建档)',
   `openid` varchar(64) DEFAULT NULL COMMENT '微信小程序openid',
   `unionid` varchar(64) DEFAULT NULL COMMENT '微信开放平台unionid',
   `session_key` varchar(128) DEFAULT NULL COMMENT '微信会话密钥session_key(仅服务端保存)',
@@ -94,6 +94,7 @@ CREATE TABLE `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`),
   UNIQUE KEY `uk_openid` (`openid`),
+  UNIQUE KEY `uk_phone` (`phone`),
   KEY `idx_unionid` (`unionid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='顾客用户表';
 

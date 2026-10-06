@@ -27,11 +27,21 @@ public interface DishMapper extends BaseMapper<Dish> {
                                        @Param("categoryId") String categoryId,
                                        @Param("keyword") String keyword,
                                        @Param("status") Integer status,
+                                       @Param("isHot") Integer isHot,
                                        @Param("isDel") Integer isDel);
 
     /**
      * 按主键查询单个菜品（含分类名称）
      */
+    /**
+     * 顾客端分页查询在售菜品（含分类名称，按销量排序），按店铺隔离
+     */
+    IPage<Dish> selectPageCustomer(Page<Dish> page,
+                                   @Param("shopId") String shopId,
+                                   @Param("categoryId") String categoryId,
+                                   @Param("status") Integer status,
+                                   @Param("isDel") Integer isDel);
+
     Dish selectDishById(@Param("id") String id);
 
     /**

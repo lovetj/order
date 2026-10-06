@@ -1,6 +1,7 @@
 package com.order.controller;
 
 import com.order.common.Result;
+import com.order.dto.PhoneLoginDTO;
 import com.order.dto.WxLoginDTO;
 import com.order.entity.User;
 import com.order.service.UserService;
@@ -24,7 +25,7 @@ public class UserController {
     private JwtUtil jwtUtil;
 
     /**
-     * 微信小程序登录（顾客端唯一登录方式）
+     * 微信小程序登录（openid 登录，保留兼容）
      *
      * 前端 wx.login 取 code 后调用本接口换取 token。
      * 首次登录会自动建档，不提供注册接口。
@@ -32,6 +33,18 @@ public class UserController {
     @PostMapping("/wx-login")
     public Result<Map<String, Object>> wxLogin(@RequestBody WxLoginDTO dto) {
         return Result.success(userService.wxLogin(dto));
+    }
+
+    /**
+     * 顾客手机号登录（当前顾客端主登录方式）
+     *
+     * 小程序端：getPhoneNumber 授权 code（phoneCode）由后端换取真实手机号；
+     * H5 端：直接提交 phone。
+     * 按手机号查用户，不存在则自动建档，返回 { token, user, isNewUser }。
+     */
+    @PostMapping("/phone-login")
+    public Result<Map<String, Object>> phoneLogin(@RequestBody PhoneLoginDTO dto) {
+        return Result.success(userService.phoneLogin(dto));
     }
 
     /** 当前用户信息 */

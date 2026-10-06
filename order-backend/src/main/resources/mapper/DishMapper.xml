@@ -63,6 +63,9 @@
             <if test="status != null">
                 AND d.status = #{status}
             </if>
+            <if test="isHot != null">
+                AND d.is_hot = #{isHot}
+            </if>
             <if test="isDel != null">
                 AND d.is_del = #{isDel}
             </if>
@@ -70,6 +73,24 @@
         ORDER BY d.is_del ASC, d.status DESC, d.is_hot DESC, d.sort ASC, d.create_time DESC
     </select>
 
+    <select id="selectPageCustomer" resultMap="DishWithCategoryMap">
+        SELECT d.*, c.name AS category_name
+        FROM dish d
+        LEFT JOIN category c ON d.category_id = c.id AND c.shop_id = d.shop_id
+        <where>
+            <if test="shopId != null and shopId != ''">
+                AND d.shop_id = #{shopId}
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND d.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND d.status = #{status}
+            </if>
+            AND d.is_del = #{isDel}
+        </where>
+        ORDER BY d.sales DESC, d.is_hot DESC, d.create_time DESC
+    </select>
     <select id="selectDishById" resultMap="DishWithCategoryMap">
         SELECT d.*, c.name AS category_name
         FROM dish d
