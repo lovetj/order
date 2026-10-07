@@ -4,7 +4,13 @@
     <!-- 未识别店铺/桌号时提示扫码 -->
     <view v-if="needScan" class="scan-tip">
       <view class="scan-tip-card">
-        <view class="scan-tip-icon">📷</view>
+        <view class="scan-tip-icon">
+          <view class="scan-corner tl"></view>
+          <view class="scan-corner tr"></view>
+          <view class="scan-corner bl"></view>
+          <view class="scan-corner br"></view>
+          <view class="scan-line"></view>
+        </view>
         <view class="scan-tip-text">
           <view class="scan-tip-title">请先扫描桌位二维码</view>
           <view class="scan-tip-desc">未识别到店铺与桌号，点餐需先识别桌位</view>
@@ -21,7 +27,16 @@
         <view class="table-tag">桌号 {{tableNo}}</view>
       </view>
       <view class="shop-slogan">{{shop.slogan}}</view>
-      <view class="scan-btn" @click="scanTable">📷 扫码识别桌号</view>
+      <view class="scan-btn" @click="scanTable">
+        <view class="scan-icon">
+          <view class="scan-corner tl"></view>
+          <view class="scan-corner tr"></view>
+          <view class="scan-corner bl"></view>
+          <view class="scan-corner br"></view>
+          <view class="scan-line"></view>
+        </view>
+        <text>扫码识别桌号</text>
+      </view>
     </view>
 
     <!-- 轮播 -->
@@ -92,12 +107,20 @@ export default {
     this.tableNo = app.globalData.tableNo || '未获取'
     // 与点餐页一致：仅携带桌位ID时回查桌号，避免展示别的店的旧桌号
     this.resolveTableNo()
-    // 无店铺/桌位上下文时不发请求，仅提示扫码
-    if (this.needScan) return
+    // 没有店铺上下文时同样要更新门店字段，避免残留默认/上一家店的宣传语等假信息
+    if (this.needScan) {
+      this.resetShopInfo()
+      return
+    }
     this.loadShop()
   },
 
   methods: {
+    // 无店铺上下文时重置门店展示信息（店名/宣传语/评分/月销/公告），避免展示残留的假数据
+    resetShopInfo() {
+      this.shop = { name: '', slogan: '', score: 0, monthSales: 0 }
+      this.notices = []
+    },
     // 桌号回查：按桌位ID查询桌号；桌位变化时强制重新反查，避免展示旧桌号
     resolveTableNo() {
       const tableId = app.globalData.tableId || ''
@@ -119,27 +142,37 @@ export default {
       this.needScan = !hasCustomerContext(app)
       this.tableNo = app.globalData.tableNo || '未获取'
       this.resolveTableNo()
-      // 无店铺/桌位上下文时不发请求，仅提示扫码
-      if (this.needScan) return
+      // 无店铺上下文：同样重置门店字段，避免残留旧店铺的宣传语
+      if (this.needScan) {
+        this.resetShopInfo()
+        return
+      }
       this.loadShop()
     },
 
     // 加载门店信息
     loadShop() {
       api.getShopInfo().then((shop) => {
-        if (!shop) return
+        // 无店铺数据：清空门店字段，不展示残留/默认的假信息
+        if (!shop) {
+          this.resetShopInfo()
+          return
+        }
         // 公告：后端用 | 分隔多条
         const notices = shop.notice
           ? String(shop.notice).split('|').filter((n) => n && n.trim())
           : []
         this.shop = {
-          name: shop.name || '扫码点餐',
+          name: shop.name || '',
           slogan: shop.slogan || '',
-          score: shop.score || 5.0,
+          score: shop.score || 0,
           monthSales: shop.monthSales || 0
         }
         this.notices = notices
-      }).catch(() => {})
+      }).catch(() => {
+        // 请求失败：清空门店字段，避免残留/串店展示上一家店的宣传语
+        this.resetShopInfo()
+      })
     },
 
     async scanTable() {
@@ -217,7 +250,44 @@ export default {
   border: 1rpx solid #ffe2c0;
   box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.16);
 }
-.scan-tip-icon { font-size: 56rpx; }
+.scan-tip-icon {
+  position: relative;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+}
+
+/* 扫码框图标：四角括号，纯 CSS 绘制（跨端通用，非相机样式） */
+.scan-tip-icon .scan-corner {
+  width: 20rpx;
+  height: 20rpx;
+  border-width: 4rpx;
+}
+
+.scan-corner {
+  position: absolute;
+  border: 3rpx solid #ff6b35;
+}
+
+.scan-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.scan-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.scan-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.scan-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+/* 中间扫描线：贯穿取景框左右角之间，模拟扫描中的横向线条 */
+.scan-line {
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  right: 15%;
+  height: 3rpx;
+  background: #ff6b35;
+  transform: translateY(-50%);
+}
+
+.scan-tip-icon .scan-line {
+  height: 4rpx;
+}
 .scan-tip-title { font-size: 30rpx; font-weight: 700; color: #b35c00; }
 .scan-tip-desc { font-size: 24rpx; color: #b07a3c; margin-top: 6rpx; }
 .scan-tip-btn {
@@ -249,6 +319,11 @@ export default {
   font-weight: 700;
   flex: 1;
   margin-right: 20rpx;
+  /* 店铺名称最多一行，超出显示省略号；min-width:0 保证 flex 中可收缩触发省略 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table-tag {
@@ -263,17 +338,39 @@ export default {
   font-size: 24rpx;
   opacity: 0.92;
   margin-top: 16rpx;
+  /* 宣传语最多两行，超出显示省略号 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .scan-btn {
   margin-top: 28rpx;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 12rpx;
   background: #fff;
   color: #ff6b35;
   font-size: 26rpx;
   font-weight: 600;
   padding: 14rpx 36rpx;
   border-radius: 999rpx;
+  line-height: 1;
+}
+
+/* 按钮内扫码框图标：略小于提示弹窗中的图标 */
+.scan-icon {
+  position: relative;
+  width: 34rpx;
+  height: 34rpx;
+  flex-shrink: 0;
+}
+
+.scan-icon .scan-corner {
+  width: 12rpx;
+  height: 12rpx;
+  border-width: 3rpx;
 }
 
 .banner {

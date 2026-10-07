@@ -321,11 +321,17 @@ export default {
 
 .profile-info {
   flex: 1;
+  /* min-width:0 保证 flex 中可收缩，使店铺名称省略号正常生效 */
+  min-width: 0;
 }
 
 .shop-name {
   font-size: 38rpx;
   font-weight: 600;
+  /* 店铺名称最多一行，超出显示省略号 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .owner {

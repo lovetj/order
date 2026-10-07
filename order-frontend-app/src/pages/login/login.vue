@@ -1,10 +1,23 @@
 <template>
   <!-- 登录页（顾客=昵称+头像快速登录 / 店家=账号密码） -->
   <view class="login-page">
-    <view class="back" @click="goBack">‹ 返回</view>
+    <!-- 顾客登录页不显示返回按钮；店家登录保留返回 -->
+    <view v-if="role === 'merchant'" class="back" @click="goBack">‹ 返回</view>
+    <!-- 顾客扫码识别桌位：固定右上角 -->
+    <view v-if="role === 'customer'" class="scan-btn" @click="scanTable">
+      <view class="scan-icon">
+        <view class="scan-corner tl"></view>
+        <view class="scan-corner tr"></view>
+        <view class="scan-corner bl"></view>
+        <view class="scan-corner br"></view>
+        <view class="scan-line"></view>
+      </view>
+      <text>扫码识别桌位</text>
+    </view>
 
     <view class="hero">
-      <view class="logo">{{role === 'merchant' ? '🏪' : '🍔'}}</view>
+      <!-- 顾客登录页不展示汉堡图标，仅店家登录展示门店图标 -->
+      <view v-if="role === 'merchant'" class="logo">🏪</view>
       <view class="title">{{role === 'merchant' ? '店家登录' : '欢迎光临'}}</view>
       <view class="subtitle">{{role === 'merchant' ? '请使用店家账号密码登录' : '使用手机号即可登录'}}</view>
       <view v-if="tableNo" class="table-tag">当前桌号：{{tableNo}}</view>
@@ -98,6 +111,7 @@
 const app = getApp()
 import api from '@/api/index'
 import { setToken } from '@/utils/request'
+import { resolveTableNo, scanOrderContext } from '@/utils/scan'
 
 const STORAGE_LAST_PHONE = 'lastPhone'
 
@@ -126,6 +140,15 @@ export default {
     // 深链扫码登录：携带 back 来源页，登录成功后回点餐/首页并复用缓存的上下文
     app.globalData.__loginBack = (options && options.back) ? options.back : ''
 
+    // 兜底：若已缓存桌位ID但桌号为空（如换桌后反查未完成），主动反查并刷新展示
+    if (!this.tableNo && app.globalData.tableId) {
+      resolveTableNo(app, app.globalData.tableId).then((r) => {
+        if (r && r.tableNo) {
+          this.tableNo = r.tableNo
+        }
+      })
+    }
+
     // #ifdef MP-WEIXIN
     // 小程序端优先自动授权
     this.manualPhone = false
@@ -140,6 +163,15 @@ export default {
   methods: {
     goBack() {
       uni.reLaunch({ url: '/pages/role/role' })
+    },
+
+    // 顾客端：扫码识别店铺/桌位，刷新当前桌号与登录成功后的回跳地址
+    async scanTable() {
+      const { ok, tableNo } = await scanOrderContext(app)
+      if (!ok) return
+      this.tableNo = tableNo || app.globalData.tableNo || ''
+      // 扫码后桌位可能变化，更新登录成功回跳地址，携带最新桌位上下文
+      app.globalData.__loginBack = `/pages/menu/menu?shopId=${encodeURIComponent(app.globalData.shopId || '')}&tableId=${encodeURIComponent(app.globalData.tableId || '')}&tableNo=${encodeURIComponent(app.globalData.tableNo || '')}`
     },
 
     switchToManual() {
@@ -290,8 +322,10 @@ export default {
 
 <style lang="scss" scoped>
 .login-page {
+  position: relative;
   min-height: 100vh;
-  padding: 120rpx 60rpx 80rpx;
+  /* 顶部预留高度：让 hero 内容与右上角扫码按钮上下错开，避免重叠 */
+  padding: 200rpx 60rpx 80rpx;
   background: linear-gradient(180deg, #fff4ef 0%, #f5f6f8 45%);
   display: flex;
   flex-direction: column;
@@ -337,6 +371,59 @@ export default {
   color: #ff6b35;
   border-radius: 999rpx;
   font-size: 24rpx;
+}
+
+.scan-btn {
+  position: absolute;
+  top: 88rpx;
+  right: 44rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 10rpx 28rpx;
+  background: #fff;
+  border: 2rpx solid #ff6b35;
+  color: #ff6b35;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1;
+  z-index: 10;
+}
+
+/* 扫码框图标：四角括号，纯 CSS 绘制（跨端通用，非相机样式） */
+.scan-icon {
+  position: relative;
+  width: 34rpx;
+  height: 34rpx;
+  flex-shrink: 0;
+}
+
+.scan-corner {
+  position: absolute;
+  width: 12rpx;
+  height: 12rpx;
+  border: 3rpx solid #ff6b35;
+}
+
+.scan-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.scan-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.scan-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.scan-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+/* 中间扫描线：贯穿取景框左右角之间，模拟扫描中的横向线条 */
+.scan-line {
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  right: 15%;
+  height: 3rpx;
+  background: #ff6b35;
+  transform: translateY(-50%);
+}
+
+.scan-btn:active {
+  background: #fff1eb;
 }
 
 .panel {

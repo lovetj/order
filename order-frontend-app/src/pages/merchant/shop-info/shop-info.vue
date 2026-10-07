@@ -804,6 +804,10 @@ export default {
 }
 
 .map-preview-wrap {
+  position: relative;
+  /* 建立独立层叠上下文，将地图内部（如左下角版权文字）的高 z-index 控件
+     限制在本容器内，避免其盖住底部固定的取消/保存操作栏 */
+  z-index: 0;
   margin-top: 16rpx;
   border-radius: 16rpx;
   overflow: hidden;
@@ -829,7 +833,9 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 100;
+  /* 需高于页面内各类内部控件（地图版权文字等），确保取消/保存始终置顶；
+     仍低于定位中蒙版 .loc-mask(999) */
+  z-index: 200;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

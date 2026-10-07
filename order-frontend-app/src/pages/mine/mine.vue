@@ -44,7 +44,6 @@
       </view>
     </view>
 
-    <view class="btn-plain action-btn" @click="switchRole">切换到店家端</view>
     <view class="btn-plain action-btn" @click="logout">退出登录</view>
     </scroll-view>
   </view>
@@ -211,20 +210,6 @@ export default {
       uni.showToast({ title: '功能开发中', icon: 'none' })
     },
 
-    switchRole() {
-      uni.showModal({
-        title: '切换身份',
-        content: '切换到「我是店家」需要重新以店家账号登录',
-        confirmText: '去登录',
-        confirmColor: '#2f80ed',
-        success: (res) => {
-          if (!res.confirm) return
-          app.globalData.logout()
-          uni.reLaunch({ url: '/pages/login/login?role=merchant' })
-        }
-      })
-    },
-
     logout() {
       uni.showModal({
         title: '提示',
@@ -232,7 +217,7 @@ export default {
         success: (res) => {
           if (res.confirm) {
             app.globalData.logout()
-            uni.reLaunch({ url: '/pages/role/role' })
+            uni.reLaunch({ url: '/pages/login/login?role=customer' })
           }
         }
       })

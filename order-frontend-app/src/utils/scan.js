@@ -96,30 +96,40 @@ export function ensureCustomerContext(options, redirectIfNotLogin = true) {
     app.globalData.setTableNo(String(query.tableNo))
   }
 
-  // 二维码可能只携带 tableId：异步二次反查桌位补齐桌号 tableNo（首次扫码/未登录也先缓存）
-  if (query.tableId && !app.globalData.tableNo) {
-    resolveTableNo(app, String(query.tableId))
+  const needResolveTableNo = !!(query.tableId && !app.globalData.tableNo)
+  const willRedirectToLogin = redirectIfNotLogin && !app.globalData.isLogin() &&
+      app.globalData.role !== 'merchant' &&
+      (app.globalData.shopId || app.globalData.tableId)
+
+  // 未登录跳登录页：携带当前上下文（shopId/tableId/tableNo），供登录成功后回跳
+  const redirectToLogin = () => {
+    if (redirectingToLogin) return
+    redirectingToLogin = true
+    const pages = getCurrentPages()
+    const page = pages.length ? pages[pages.length - 1] : null
+    // page.route 形如 'pages/menu/menu'（已含 pages/ 前缀），正确拼接需 '/' + route
+    const route = (page && page.route) || 'pages/menu/menu'
+    app.globalData.__loginBack = `/${route}?shopId=${encodeURIComponent(app.globalData.shopId || '')}&tableId=${encodeURIComponent(app.globalData.tableId || '')}&tableNo=${encodeURIComponent(app.globalData.tableNo || '')}`
+    setTimeout(() => {
+      redirectingToLogin = false
+      uni.reLaunch({ url: `/pages/login/login?role=customer&back=${encodeURIComponent(app.globalData.__loginBack || '')}` })
+    }, 0)
   }
 
-  // 未登录 + 顾客 + 已具备扫码上下文 -> 跳登录页（防重入）
-  if (redirectIfNotLogin && !app.globalData.isLogin() &&
-      app.globalData.role !== 'merchant' &&
-      (app.globalData.shopId || app.globalData.tableId)) {
-    if (!redirectingToLogin) {
-      redirectingToLogin = true
-      // 记录来源页，登录成功后回点餐/首页并携带上下文
-      const pages = getCurrentPages()
-      const page = pages.length ? pages[pages.length - 1] : null
-      const route = (page && page.route) || 'pages/menu/menu'
-      app.globalData.__loginBack = `/pages/${route}?shopId=${encodeURIComponent(app.globalData.shopId || '')}&tableId=${encodeURIComponent(app.globalData.tableId || '')}&tableNo=${encodeURIComponent(app.globalData.tableNo || '')}`
-      setTimeout(() => {
-        redirectingToLogin = false
-        uni.reLaunch({ url: `/pages/login/login?role=customer&back=${encodeURIComponent(app.globalData.__loginBack || '')}` })
-      }, 0)
+  if (willRedirectToLogin) {
+    // 二维码可能只携带 tableId：需先反查桌号再跳登录页，确保登录页展示的是当前桌号
+    if (needResolveTableNo) {
+      resolveTableNo(app, String(query.tableId)).finally(redirectToLogin)
+    } else {
+      redirectToLogin()
     }
     return false
   }
 
+  // 已登录：异步反查桌号（不阻塞页面渲染，页面自身也会兜底回查）
+  if (needResolveTableNo) {
+    resolveTableNo(app, String(query.tableId))
+  }
   // 已登录且上下文变化 -> 刷新三要素登录态
   if (hasNew && app.globalData.isLogin()) {
     app.globalData.rebindCustomerSession()
