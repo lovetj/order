@@ -27,6 +27,8 @@
         <jwt.version>0.11.5</jwt.version>
         <hutool.version>5.8.18</hutool.version>
         <fastjson.version>2.0.25</fastjson.version>
+        <thumbnailator.version>0.4.20</thumbnailator.version>
+        <webp-imageio.version>0.1.6</webp-imageio.version>
     </properties>
 
     <dependencies>
@@ -79,6 +81,20 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>${hutool.version}</version>
+        </dependency>
+
+        <!-- 高性能高质量图片压缩引擎 (Thumbnailator) -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>${thumbnailator.version}</version>
+        </dependency>
+
+        <!-- WebP 图片编码解码支持 (包含全平台 Native 动态链接库) -->
+        <dependency>
+            <groupId>org.sejda.imageio</groupId>
+            <artifactId>webp-imageio</artifactId>
+            <version>${webp-imageio.version}</version>
         </dependency>
 
         <dependency>

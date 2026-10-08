@@ -50,8 +50,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         // 店铺ID写入 token，后续所有店家端接口据此做数据隔离
         String token = jwtUtil.generateToken(admin.getId(), admin.getUsername(), "merchant", admin.getShopId());
 
-        // 不下发密码哈希
+        // 不下发密码哈希，动态拼接头像 base-url
         admin.setPassword(null);
+        admin.setAvatar(toAbsoluteAvatar(admin.getAvatar()));
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);

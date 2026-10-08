@@ -1,7 +1,6 @@
 <template>
   <view class="role-page">
     <view class="hero">
-      <view class="logo">🍔</view>
       <view class="title">扫码点餐</view>
       <view class="subtitle">请选择你的身份进入</view>
       <view v-if="tableNo" class="table-tag">当前桌号：{{tableNo}}</view>
@@ -9,7 +8,6 @@
 
     <view class="role-list">
       <view class="role-card customer" @click="chooseRole('customer')">
-        <view class="role-icon">🙋</view>
         <view class="role-info">
           <view class="role-name">我是顾客</view>
           <view class="role-desc">浏览菜单 · 在线点餐 · 查看订单</view>
@@ -18,7 +16,6 @@
       </view>
 
       <view class="role-card merchant" @click="chooseRole('merchant')">
-        <view class="role-icon">🏪</view>
         <view class="role-info">
           <view class="role-name">我是店家</view>
           <view class="role-desc">管理后台 · 商品维护 · 处理订单</view>
@@ -66,12 +63,6 @@ export default {
 .hero {
   text-align: center;
   margin-bottom: 90rpx;
-}
-
-.logo {
-  font-size: 130rpx;
-  line-height: 1;
-  margin-bottom: 24rpx;
 }
 
 .title {
@@ -122,11 +113,6 @@ export default {
 
 .role-card.merchant {
   border-left: 10rpx solid #2f80ed;
-}
-
-.role-icon {
-  font-size: 72rpx;
-  margin-right: 28rpx;
 }
 
 .role-info {

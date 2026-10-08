@@ -95,7 +95,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         dish.setCategoryId(dto.getCategoryId());
         dish.setName(dto.getName());
         dish.setDescription(dto.getDescription());
-        dish.setImage(dto.getImage());
+        dish.setImage(FileUrlUtil.toRelative(dto.getImage()));
         dish.setPrice(dto.getPrice());
         dish.setMinBuy(dto.getMinBuy());
         dish.setStock(dto.getStock());
@@ -150,7 +150,7 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
             dish.setDescription(dto.getDescription());
         }
         if (dto.getImage() != null) {
-            dish.setImage(dto.getImage());
+            dish.setImage(FileUrlUtil.toRelative(dto.getImage()));
         }
         if (dto.getPrice() != null) {
             dish.setPrice(dto.getPrice());

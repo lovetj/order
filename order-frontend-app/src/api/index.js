@@ -105,9 +105,9 @@ export default {
   deleteCoupon: (id) => http.del(`/api/coupon/admin/${id}`),
 
   // ==================== 文件上传 ====================
-  uploadUrl: (bizType = 'dish') => `${baseUrl}/api/file/upload?bizType=${bizType}`,
-  uploadFile: (filePath, bizType = 'other') => uploadFile(filePath, bizType),
-  uploadFiles: (filePaths, bizType = 'other') => uploadFiles(filePaths, bizType),
+  uploadUrl: (bizType = 'dish') => `${baseUrl}/api/file/upload?bizType=${encodeURIComponent(bizType)}`,
+  uploadFile: (filePath, bizType = 'other', extraData = {}) => uploadFile(filePath, bizType, extraData),
+  uploadFiles: (filePaths, bizType = 'other', extraData = {}) => uploadFiles(filePaths, bizType, extraData),
   deleteFile: (path) => http.del(`/api/file/delete?path=${encodeURIComponent(path || '')}`),
 
   // ==================== 小票打印（店家端） ====================

@@ -349,13 +349,13 @@ export default {
 
     chooseLogo() {
       if (this.uploading) return
-      uni.chooseMedia({
+      uni.chooseImage({
         count: 1,
-        mediaType: ['image'],
         sourceType: ['album', 'camera'],
         sizeType: ['compressed'],
         success: (res) => {
-          const filePath = res.tempFiles[0].tempFilePath
+          const filePath = (res.tempFilePaths && res.tempFilePaths[0]) || (res.tempFiles && res.tempFiles[0] && (res.tempFiles[0].path || res.tempFiles[0].tempFilePath))
+          if (!filePath) return
           this.uploading = true
           uni.showLoading({ title: '上传中', mask: true })
           api.uploadFile(filePath, 'shop').then((data) => {
@@ -415,17 +415,16 @@ export default {
         uni.showToast({ title: `最多上传 ${MAX_IMAGES} 张`, icon: 'none' })
         return
       }
-      uni.chooseMedia({
+      uni.chooseImage({
         count: remain,
-        mediaType: ['image'],
         sourceType: ['album', 'camera'],
         sizeType: ['compressed'],
         success: (res) => {
-          const paths = (res.tempFiles || []).map((f) => f.tempFilePath)
-          if (!paths.length) return
+          const paths = res.tempFilePaths || (res.tempFiles || []).map((f) => f.path || f.tempFilePath).filter(Boolean)
+          if (!paths || !paths.length) return
           this.uploading = true
           uni.showLoading({ title: `上传中 0/${paths.length}`, mask: true })
-          // 多文件逐个上传；后端原图保存不做压缩，仅校验单张不超过 10MB
+          // 多文件逐个上传；后端 750px 缩略图等比缩放
           api.uploadFiles(paths, 'shop').then((list) => {
             // 直接使用上传接口返回的 url（完整可访问地址），提交时后端归一化入库
             const added = (list || []).map((item) => item.url).filter(Boolean)

@@ -55,7 +55,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
         }
         String baseServer = fileConfigProperties.getBaseServer();
         shop.setLogo(FileUrlUtil.toAbsolute(shop.getLogo(), baseServer));
-        shop.setImages(toAbsoluteMulti(shop.getImages(), baseServer));
+        shop.setImages(FileUrlUtil.toAbsoluteMulti(shop.getImages(), baseServer));
         return shop;
     }
 

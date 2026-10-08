@@ -4,7 +4,9 @@ import com.order.common.Result;
 import com.order.dto.PhoneLoginDTO;
 import com.order.dto.WxLoginDTO;
 import com.order.entity.User;
+import com.order.config.FileConfigProperties;
 import com.order.service.UserService;
+import com.order.util.FileUrlUtil;
 import com.order.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +25,9 @@ public class UserController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
 
     /**
      * 微信小程序登录（openid 登录，保留兼容）
@@ -55,7 +60,13 @@ public class UserController {
         if (userId == null) {
             return Result.error(401, "用户未登录，请先登录");
         }
-        return Result.success(userService.getById(userId));
+        User user = userService.getById(userId);
+        if (user != null) {
+            user.setPassword(null);
+            user.setSessionKey(null);
+            user.setAvatar(FileUrlUtil.toAbsoluteIfImage(user.getAvatar(), fileConfigProperties.getBaseServer()));
+        }
+        return Result.success(user);
     }
 
     /**

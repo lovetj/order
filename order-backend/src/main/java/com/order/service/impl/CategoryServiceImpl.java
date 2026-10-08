@@ -6,7 +6,9 @@ import com.order.entity.Category;
 import com.order.entity.Dish;
 import com.order.mapper.CategoryMapper;
 import com.order.mapper.DishMapper;
+import com.order.config.FileConfigProperties;
 import com.order.service.CategoryService;
+import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,19 +22,28 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     @Autowired
     private DishMapper dishMapper;
 
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
+
     @Override
     public List<Category> listEnabled(String shopId) {
-        return list(new LambdaQueryWrapper<Category>()
+        List<Category> list = list(new LambdaQueryWrapper<Category>()
                 .eq(StringUtils.hasText(shopId), Category::getShopId, shopId)
                 .eq(Category::getStatus, 1)
                 .orderByAsc(Category::getSort));
+        String baseServer = fileConfigProperties.getBaseServer();
+        list.forEach(c -> c.setIcon(FileUrlUtil.toAbsoluteIfImage(c.getIcon(), baseServer)));
+        return list;
     }
 
     @Override
     public List<Category> listAll(String shopId) {
-        return list(new LambdaQueryWrapper<Category>()
+        List<Category> list = list(new LambdaQueryWrapper<Category>()
                 .eq(StringUtils.hasText(shopId), Category::getShopId, shopId)
                 .orderByAsc(Category::getSort));
+        String baseServer = fileConfigProperties.getBaseServer();
+        list.forEach(c -> c.setIcon(FileUrlUtil.toAbsoluteIfImage(c.getIcon(), baseServer)));
+        return list;
     }
 
     @Override
@@ -61,6 +72,9 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         }
         if (category.getSort() == null) {
             category.setSort(0);
+        }
+        if (category.getIcon() != null) {
+            category.setIcon(FileUrlUtil.toRelative(category.getIcon()));
         }
         save(category);
     }
@@ -91,6 +105,9 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         }
         // 店铺ID不可被前端篡改
         category.setShopId(exist.getShopId());
+        if (category.getIcon() != null) {
+            category.setIcon(FileUrlUtil.toRelative(category.getIcon()));
+        }
         updateById(category);
     }
 

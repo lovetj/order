@@ -5,22 +5,24 @@
       <view class="label">菜品图片 <text class="required">*</text></view>
       <view class="img-area">
         <image
-          v-if="isImageUrl"
+          v-if="isImageUrl && imageUrl"
           class="preview-img"
           :src="imageUrl"
           mode="aspectFill"
           @click="previewImage"
         ></image>
-        <view v-else class="preview">{{form.image}}</view>
+        <view v-else-if="form.image" class="preview">{{form.image}}</view>
+        <view v-else class="preview-empty" @click="chooseImage">
+          <text class="empty-icon">📷</text>
+          <text class="empty-text">点击上传图片</text>
+        </view>
         <view class="img-ops">
           <view class="img-btn primary" @click="chooseImage">
-            {{uploading ? '上传中...' : (isImageUrl ? '更换图片' : '上传图片')}}
+            {{uploading ? '上传中...' : ((isImageUrl || form.image) ? '更换图片' : '上传图片')}}
           </view>
-          <view v-if="isImageUrl" class="img-btn" @click="removeImage">移除</view>
+          <view v-if="isImageUrl || form.image" class="img-btn" @click="removeImage">移除</view>
         </view>
       </view>
-
-      
     </view>
 
     <!-- 基本信息 -->
@@ -197,16 +199,18 @@
       </view>
     </view>
 
-    <!-- 操作按钮（固定悬浮底部）：删除在前，保存在后，横向平排 -->
+    <!-- 操作按钮（固定悬浮底部）：取消/删除/保存，横向平排 -->
     <view class="btn-wrap">
-      <view v-if="isEdit" class="delete-btn" :class="{ disabled: deleting }" @click="remove">
+      <view v-if="hasUnsaved" class="unsaved-tip">有未保存的修改</view>
+      <button class="cancel-btn" :disabled="submitting || deleting" @click="cancel">取消</button>
+      <button v-if="isEdit" class="delete-btn" :disabled="deleting || submitting" @click="remove">
         <view v-if="deleting" class="btn-spinner danger"></view>
         <text>{{deleting ? '删除中...' : '删除菜品'}}</text>
-      </view>
-      <view class="btn-primary submit-btn" :class="{ disabled: submitting }" @click="submit">
+      </button>
+      <button class="btn-primary submit-btn" :class="{ 'save-btn-active': hasUnsaved }" :disabled="submitting || deleting || uploading" @click="submit">
         <view v-if="submitting" class="btn-spinner"></view>
         <text>{{submitting ? '保存中...' : (isEdit ? '保存修改' : '确认新增')}}</text>
-      </view>
+      </button>
     </view>
 
     <!-- 保存/删除 全局加载蒙版 -->
@@ -251,6 +255,10 @@ export default {
       submitting: false,
       deleting: false,
       uploading: false,
+      // 是否存在未保存的改动：用于离页提醒与「未保存」提示
+      hasUnsaved: false,
+      // 图片是否被用户改动过：未改动或已保存重置为 false
+      imageDirty: false,
       // 当前激活的选项（显示左右移动按钮）
       activeGi: -1,
       activeOi: -1,
@@ -265,7 +273,63 @@ export default {
     uni.setNavigationBarTitle({ title: id ? '编辑菜品' : '新增菜品' })
     this.loadCategories(id)
   },
+  onUnload() {
+    // 关闭系统级离页拦截，避免已保存或退出后仍弹窗
+    if (this._alertEnabled && uni.disableAlertBeforeUnload) {
+      uni.disableAlertBeforeUnload()
+      this._alertEnabled = false
+    }
+  },
   methods: {
+    /**
+     * 离页守护：有未保存改动时，阻止直接返回并二次确认。
+     * 尤其是「已上传图片但没点保存」的情况，此时图片文件已在服务器上，
+     * 但路径尚未入库，必须提醒用户保存。
+     */
+    enableLeaveGuard() {
+      if (uni.enableAlertBeforeUnload && !this._alertEnabled) {
+        uni.enableAlertBeforeUnload({
+          message: this.imageDirty
+            ? '图片已上传但尚未保存，离开将不会生效，确定离开吗？'
+            : '菜品信息尚未保存，确定离开吗？'
+        })
+        this._alertEnabled = true
+      }
+    },
+
+    // 标记有未保存改动
+    markDirty() {
+      if (!this.hasUnsaved) {
+        this.hasUnsaved = true
+      }
+      this.enableLeaveGuard()
+    },
+
+    // 取消编辑：有未保存改动时二次确认后返回
+    cancel() {
+      if (this.submitting || this.deleting) return
+      const quit = () => {
+        if (this._alertEnabled && uni.disableAlertBeforeUnload) {
+          uni.disableAlertBeforeUnload()
+          this._alertEnabled = false
+        }
+        uni.navigateBack()
+      }
+      if (!this.hasUnsaved) {
+        quit()
+        return
+      }
+      uni.showModal({
+        title: '放弃编辑？',
+        content: '当前修改尚未保存，确定要离开吗？',
+        confirmText: '放弃',
+        confirmColor: '#ff3b30',
+        success: (res) => {
+          if (res.confirm) quit()
+        }
+      })
+    },
+
     // 选择并上传图片
     chooseImage() {
       if (this.uploading) return
@@ -274,7 +338,8 @@ export default {
         sourceType: ['album', 'camera'],
         sizeType: ['compressed'],
         success: (res) => {
-          const filePath = res.tempFilePaths[0]
+          const filePath = (res.tempFilePaths && res.tempFilePaths[0]) || (res.tempFiles && res.tempFiles[0] && (res.tempFiles[0].path || res.tempFiles[0].tempFilePath))
+          if (!filePath) return
           this.uploadImage(filePath)
         }
       })
@@ -292,7 +357,9 @@ export default {
         this.form.image = toRelativePath(data.url, data.relativePath)
         this.imageUrl = data.url
         this.isImageUrl = true
-        uni.showToast({ title: '上传成功', icon: 'success' })
+        this.imageDirty = true
+        this.markDirty()
+        uni.showToast({ title: '上传成功，记得点保存', icon: 'none' })
       }).catch((e) => {
         uni.showToast({ title: (e && e.message) || '上传失败', icon: 'none' })
       }).then(() => {
@@ -306,6 +373,8 @@ export default {
       this.form.image = ''
       this.imageUrl = ''
       this.isImageUrl = false
+      this.imageDirty = true
+      this.markDirty()
     },
 
     previewImage() {
@@ -323,6 +392,9 @@ export default {
         }
         if (id) {
           this.loadDish(id)
+        } else {
+          this.hasUnsaved = false
+          this.imageDirty = false
         }
       }).catch(() => {})
     },
@@ -332,8 +404,14 @@ export default {
         if (!dish) return
         const index = this.categories.findIndex((c) => c.id === dish.categoryId)
         const image = dish.image || ''
-        // 后端出参已是完整可访问地址（http 开头）或相对路径（历史数据），其余视为 emoji
-        const isImageUrl = /^https?:\/\//.test(image) || image.startsWith('/')
+        // 后端出参已是完整可访问地址（http 开头）或相对路径（历史数据）
+        const isImageUrl = !image ? false : (
+          /^https?:\/\//i.test(image) ||
+          image.startsWith('/') ||
+          image.startsWith('data:') ||
+          image.startsWith('blob:') ||
+          /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(image)
+        )
         this.categoryIndex = index < 0 ? 0 : index
         this.isImageUrl = isImageUrl
         // 展示用接口返回字段（完整地址直接渲染）；表单仍存相对路径，保持提交约定
@@ -362,11 +440,20 @@ export default {
             isDefault: !!o.isDefault
           }))
         }))
+
+        // 数据加载/回填完毕，重置未保存状态与离页拦截
+        this.hasUnsaved = false
+        this.imageDirty = false
+        if (this._alertEnabled && uni.disableAlertBeforeUnload) {
+          uni.disableAlertBeforeUnload()
+          this._alertEnabled = false
+        }
       }).catch(() => {})
     },
 
     onInput(field, e) {
       this.form[field] = e.detail.value
+      this.markDirty()
     },
 
     // 切换分类
@@ -375,16 +462,19 @@ export default {
       const category = this.categories[index]
       this.categoryIndex = index
       this.form.categoryId = category ? category.id : ''
+      this.markDirty()
     },
 
     // 是否热销
     onHotChange(e) {
       this.form.isHot = e.detail.value ? 1 : 0
+      this.markDirty()
     },
 
     // 是否上架
     onStatusChange(e) {
       this.form.status = e.detail.value ? 1 : 0
+      this.markDirty()
     },
 
     // ==================== 规格管理 ====================
@@ -415,6 +505,7 @@ export default {
             options: []
           })
           this.specGroups = specGroups
+          this.markDirty()
         }
       })
     },
@@ -437,6 +528,7 @@ export default {
           this.activeGi = -1
           this.activeOi = -1
           this.activeGroupGi = -1
+          this.markDirty()
           uni.showToast({ title: '已删除', icon: 'none' })
         }
       })
@@ -447,6 +539,7 @@ export default {
       const specGroups = [...this.specGroups]
       specGroups[gi].selectType = specGroups[gi].selectType === 1 ? 2 : 1
       this.specGroups = specGroups
+      this.markDirty()
     },
 
     // 切换分组是否必选
@@ -454,6 +547,7 @@ export default {
       const specGroups = [...this.specGroups]
       specGroups[gi].required = specGroups[gi].required === 1 ? 0 : 1
       this.specGroups = specGroups
+      this.markDirty()
     },
 
     // 新增分组下的选项
@@ -488,6 +582,7 @@ export default {
                 isDefault: false
               })
               this.specGroups = specGroups
+              this.markDirty()
             }
           })
         }
@@ -513,6 +608,7 @@ export default {
           this.specGroups = specGroups
           this.activeGi = -1
           this.activeOi = -1
+          this.markDirty()
           uni.showToast({ title: '已删除', icon: 'none' })
         }
       })
@@ -552,6 +648,7 @@ export default {
         }
       })
       this.specGroups = specGroups
+      this.markDirty()
     },
 
     // 左移 / 右移选项（dir: -1 左移，1 右移）
@@ -569,6 +666,7 @@ export default {
       this.specGroups = specGroups
       this.activeGi = gi
       this.activeOi = target
+      this.markDirty()
     },
 
     // 取消激活（点击空白处收起所有移动按钮）
@@ -603,6 +701,7 @@ export default {
       // 激活分组跟随移动到新位置
       this.specGroups = specGroups
       this.activeGroupGi = target
+      this.markDirty()
     },
 
     // 保存规格（新增菜品时需先保存菜品拿到 id）
@@ -632,8 +731,9 @@ export default {
         uni.showToast({ title: '请选择分类', icon: 'none' })
         return
       }
-      // 菜品图片必填：需为真实上传的图片
-      if (!this.isImageUrl || !form.image || !form.image.startsWith('/')) {
+      // 菜品图片必填校验
+      const imageVal = (this.form.image && String(this.form.image).trim()) || (this.imageUrl && String(this.imageUrl).trim()) || ''
+      if (!imageVal) {
         uni.showToast({ title: '请上传菜品图片', icon: 'none' })
         return
       }
@@ -661,11 +761,14 @@ export default {
         return
       }
 
+      // 提取相对路径入库（如 /dish/1001/xxx.webp），若是外部地址或自定义值则保留原值
+      const finalImage = toRelativePath(imageVal) || imageVal
+
       const payload = {
         categoryId: form.categoryId,
         name: form.name.trim(),
         description: form.description.trim(),
-        image: form.image,
+        image: finalImage,
         price,
         minBuy,
         stock,
@@ -684,6 +787,13 @@ export default {
         const dishId = isEdit ? id : result
         // 菜品保存成功后再保存规格（规格需 dishId）
         return this.saveSpecs(dishId).then(() => {
+          // 保存成功：关闭离页拦截，避免返回时再弹确认
+          if (this._alertEnabled && uni.disableAlertBeforeUnload) {
+            uni.disableAlertBeforeUnload()
+            this._alertEnabled = false
+          }
+          this.hasUnsaved = false
+          this.imageDirty = false
           uni.showToast({ title: isEdit ? '保存成功' : '新增成功', icon: 'success' })
           setTimeout(() => uni.navigateBack(), 700)
         })
@@ -704,6 +814,11 @@ export default {
           if (!res.confirm) return
           this.deleting = true
           api.deleteDish(this.id).then(() => {
+            if (this._alertEnabled && uni.disableAlertBeforeUnload) {
+              uni.disableAlertBeforeUnload()
+              this._alertEnabled = false
+            }
+            this.hasUnsaved = false
             uni.showToast({ title: '已删除', icon: 'none' })
             setTimeout(() => uni.navigateBack(), 700)
           }).catch(() => {}).then(() => {
@@ -741,6 +856,30 @@ export default {
   justify-content: center;
   font-size: 110rpx;
   margin: 20rpx auto;
+}
+
+.preview-empty {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 20rpx;
+  background: #fafafa;
+  border: 2rpx dashed #d0d0d0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 20rpx auto;
+}
+
+.empty-icon {
+  font-size: 54rpx;
+  line-height: 1;
+}
+
+.empty-text {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 10rpx;
 }
 
 .img-area {
@@ -808,7 +947,7 @@ export default {
   font-size: 28rpx;
 }
 
-/* 底部操作栏：固定悬浮在页面下方，删除与保存横向平排 */
+/* 底部操作栏：固定悬浮在页面下方，取消/删除与保存横向平排 */
 .btn-wrap {
   position: fixed;
   left: 0;
@@ -816,11 +955,21 @@ export default {
   bottom: 0;
   z-index: 100;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 20rpx;
-  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.unsaved-tip {
+  flex: 0 0 100%;
+  width: 100%;
+  font-size: 24rpx;
+  color: #ff8f1f;
+  line-height: 1;
+  margin-bottom: 4rpx;
 }
 
 /* 规格配置 */
@@ -1010,6 +1159,36 @@ export default {
 
 .submit-btn.disabled {
   opacity: 0.6;
+}
+
+/* 有未保存改动时高亮，吸引用户点击保存 */
+.save-btn-active {
+  background: #ff6b35 !important;
+  box-shadow: 0 6rpx 16rpx rgba(255, 107, 53, 0.35) !important;
+}
+
+.cancel-btn {
+  flex-shrink: 0;
+  margin: 0;
+  height: 92rpx;
+  padding: 0 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 30rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #555;
+  box-sizing: border-box;
+}
+
+.cancel-btn.disabled {
+  opacity: 0.6;
+}
+
+.cancel-btn::after {
+  border: none;
 }
 
 .delete-btn {

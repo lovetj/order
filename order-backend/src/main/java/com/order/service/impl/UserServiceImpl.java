@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.order.config.FileConfigProperties;
 import com.order.config.WechatProperties;
 import com.order.dto.LoginDTO;
 import com.order.dto.PhoneLoginDTO;
@@ -41,6 +42,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private WechatProperties wechatProperties;
+
+    @Autowired
+    private FileConfigProperties fileConfigProperties;
 
     /** 微信 access_token 简单缓存（expires_in 7200s，提前 60s 过期） */
     private volatile String wxAccessToken;
@@ -173,9 +177,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             customerSessionService.bindLogin(user.getId(), dto.getShopId(), dto.getTableId(), token);
         }
 
-        // 不下发敏感字段
+        // 不下发敏感字段，动态拼接头像 base-url
         user.setPassword(null);
         user.setSessionKey(null);
+        user.setAvatar(FileUrlUtil.toAbsoluteIfImage(user.getAvatar(), fileConfigProperties.getBaseServer()));
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);

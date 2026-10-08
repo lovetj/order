@@ -125,16 +125,44 @@ export const http = {
 }
 
 /**
- * 单文件上传（返回后端 data: { url, relativePath, fileName }）
+ * 单文件上传（返回后端 data: { url, relativePath, fileName, size, width, height }）
+ * 自动携带 Authorization 及业务上下文请求头 (X-Shop-Id, X-User-Id, X-Table-Id) 与 formData
  */
-export function uploadFile(filePath, bizType = 'other') {
+export function uploadFile(filePath, bizType = 'other', extraData = {}) {
   const token = getToken()
+  const shopId = uni.getStorageSync('shopId') || ''
+  const userId = uni.getStorageSync('userId') || ''
+  const tableId = uni.getStorageSync('tableId') || ''
+
+  const header = {}
+  if (token) {
+    header.Authorization = `Bearer ${token}`
+  }
+  if (shopId) {
+    header['X-Shop-Id'] = String(shopId)
+  }
+  if (userId) {
+    header['X-User-Id'] = String(userId)
+  }
+  if (tableId) {
+    header['X-Table-Id'] = String(tableId)
+  }
+
+  const formData = {
+    bizType,
+    ...(shopId ? { shopId: String(shopId) } : {}),
+    ...(userId ? { userId: String(userId) } : {}),
+    ...(tableId ? { tableId: String(tableId) } : {}),
+    ...extraData
+  }
+
   return new Promise((resolve, reject) => {
     uni.uploadFile({
-      url: `${baseUrl}/api/file/upload?bizType=${bizType}`,
+      url: `${baseUrl}/api/file/upload?bizType=${encodeURIComponent(bizType)}`,
       filePath,
       name: 'file',
-      header: token ? { Authorization: `Bearer ${token}` } : {},
+      header,
+      formData,
       success: (res) => {
         try {
           const body = JSON.parse(res.data)
@@ -155,10 +183,10 @@ export function uploadFile(filePath, bizType = 'other') {
 /**
  * 多文件上传（并发调用单文件上传接口，按传入顺序汇总返回）
  */
-export function uploadFiles(filePaths, bizType = 'other') {
+export function uploadFiles(filePaths, bizType = 'other', extraData = {}) {
   const paths = (filePaths || []).filter(Boolean)
   if (!paths.length) return Promise.resolve([])
-  return Promise.all(paths.map((filePath) => uploadFile(filePath, bizType)))
+  return Promise.all(paths.map((filePath) => uploadFile(filePath, bizType, extraData)))
 }
 
 export default {

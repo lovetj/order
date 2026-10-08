@@ -1,8 +1,6 @@
 <template>
   <!-- 登录页（顾客=昵称+头像快速登录 / 店家=账号密码） -->
   <view class="login-page">
-    <!-- 顾客登录页不显示返回按钮；店家登录保留返回 -->
-    <view v-if="role === 'merchant'" class="back" @click="goBack">‹ 返回</view>
     <!-- 顾客扫码识别桌位：固定右上角 -->
     <view v-if="role === 'customer'" class="scan-btn" @click="scanTable">
       <view class="scan-icon">
@@ -16,8 +14,6 @@
     </view>
 
     <view class="hero">
-      <!-- 顾客登录页不展示汉堡图标，仅店家登录展示门店图标 -->
-      <view v-if="role === 'merchant'" class="logo">🏪</view>
       <view class="title">{{role === 'merchant' ? '店家登录' : '欢迎光临'}}</view>
       <view class="subtitle">{{role === 'merchant' ? '请使用店家账号密码登录' : '使用手机号即可登录'}}</view>
       <view v-if="tableNo" class="table-tag">当前桌号：{{tableNo}}</view>
@@ -161,10 +157,6 @@ export default {
   },
 
   methods: {
-    goBack() {
-      uni.reLaunch({ url: '/pages/role/role' })
-    },
-
     // 顾客端：扫码识别店铺/桌位，刷新当前桌号与登录成功后的回跳地址
     async scanTable() {
       const { ok, tableNo } = await scanOrderContext(app)
@@ -331,23 +323,9 @@ export default {
   flex-direction: column;
 }
 
-.back {
-  position: absolute;
-  top: 88rpx;
-  left: 44rpx;
-  font-size: 30rpx;
-  color: #8a8a8a;
-}
-
 .hero {
   text-align: center;
   margin-bottom: 60rpx;
-}
-
-.logo {
-  font-size: 120rpx;
-  line-height: 1;
-  margin-bottom: 22rpx;
 }
 
 .title {

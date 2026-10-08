@@ -19,6 +19,18 @@ public class DiningTable implements Serializable {
 
     private String shopId;
 
+    /** 楼号/楼层，如 1楼、2楼、A栋1楼 */
+    @TableField("building_no")
+    private String buildingNo;
+
+    /** 类型：大厅 / 包房 */
+    @TableField("type")
+    private String type;
+
+    /** 桌位别名，如 牡丹阁、VIP1、靠窗位 */
+    @TableField("alias")
+    private String alias;
+
     /** 桌号，如 A01 */
     private String tableNo;
 

@@ -6,6 +6,7 @@ import com.order.entity.PointsGoods;
 import com.order.service.PointsService;
 import com.order.util.JwtUtil;
 import com.order.util.ShopContext;
+import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,6 +59,7 @@ public class PointsAdminController {
         if (goods.getIsDel() == null) {
             goods.setIsDel(0);
         }
+        goods.setImage(FileUrlUtil.toRelative(goods.getImage()));
         pointsService.save(goods);
         return Result.success();
     }
@@ -78,6 +80,9 @@ public class PointsAdminController {
             return Result.error(403, "无权操作其他店铺的商品");
         }
         goods.setShopId(exist.getShopId());
+        if (goods.getImage() != null) {
+            goods.setImage(FileUrlUtil.toRelative(goods.getImage()));
+        }
         pointsService.updateById(goods);
         return Result.success();
     }

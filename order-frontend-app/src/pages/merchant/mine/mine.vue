@@ -30,12 +30,7 @@
       </view>
     </view>
 
-    <view class="card switch-card" @click="switchRole">
-      <text class="switch-text">切换到「我是顾客」</text>
-      <text class="arrow">›</text>
-    </view>
-
-    <view class="reset" @click="backToRoleSelect">重新选择身份</view>
+    <view class="btn-plain action-btn" @click="logout">退出登录</view>
     </scroll-view>
   </view>
 </template>
@@ -149,7 +144,7 @@ export default {
         sourceType: ['album', 'camera'],
         sizeType: ['compressed'],
         success: (res) => {
-          const filePath = res.tempFiles[0].tempFilePath
+          const filePath = (res.tempFilePaths && res.tempFilePaths[0]) || (res.tempFiles && res.tempFiles[0] && (res.tempFiles[0].path || res.tempFiles[0].tempFilePath))
           if (!filePath) return
           this.uploadingAvatar = true
           uni.showLoading({ title: '上传中', mask: true })
@@ -236,23 +231,17 @@ export default {
       }).catch(() => {})
     },
 
-    switchRole() {
+    logout() {
       uni.showModal({
-        title: '切换身份',
-        content: '切换到「我是顾客」需要重新登录',
-        confirmText: '去登录',
-        confirmColor: '#ff6b35',
+        title: '提示',
+        content: '确定退出登录吗？',
         success: (res) => {
-          if (!res.confirm) return
-          app.globalData.logout()
-          uni.reLaunch({ url: '/pages/login/login?role=customer' })
+          if (res.confirm) {
+            app.globalData.logout()
+            uni.reLaunch({ url: '/pages/login/login?role=merchant' })
+          }
         }
       })
-    },
-
-    backToRoleSelect() {
-      app.globalData.logout()
-      uni.reLaunch({ url: '/pages/role/role' })
     }
   }
 }
@@ -382,22 +371,15 @@ export default {
   font-size: 44rpx;
 }
 
-.switch-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.switch-text {
-  font-size: 29rpx;
-  color: #ff6b35;
-  font-weight: 600;
-}
-
-.reset {
+.action-btn {
+  margin: 32rpx 24rpx;
+  height: 88rpx;
+  line-height: 88rpx;
   text-align: center;
-  color: #8a8a8a;
-  font-size: 26rpx;
-  padding: 20rpx 0 40rpx;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  background: #fff;
+  color: #ff3b30;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
 }
 </style>

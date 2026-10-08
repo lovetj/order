@@ -9,7 +9,7 @@
 // 生产环境：
 //   改为 https 正式域名
 
-export const ENV = 'prod'
+export const ENV = 'dev'
 
 export const CONFIG = {
   dev: {

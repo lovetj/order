@@ -108,7 +108,7 @@ public class PointsServiceImpl extends ServiceImpl<PointsGoodsMapper, PointsGood
         exchange.setShopId(goodsShopId);
         exchange.setGoodsId(goodsId);
         exchange.setGoodsName(goods.getName());
-        exchange.setGoodsImage(goods.getImage());
+        exchange.setGoodsImage(FileUrlUtil.toRelative(goods.getImage()));
         exchange.setPoints(totalPoints);
         exchange.setQuantity(qty);
         exchange.setStatus(0);

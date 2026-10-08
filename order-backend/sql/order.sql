@@ -259,6 +259,9 @@ DROP TABLE IF EXISTS `dining_table`;
 CREATE TABLE `dining_table` (
   `id` varchar(128) NOT NULL COMMENT '主键ID',
   `shop_id` varchar(128) NOT NULL COMMENT '门店ID',
+  `building_no` varchar(50) DEFAULT '1楼' COMMENT '楼号/楼层，如 1楼、2楼、A栋1楼',
+  `type` varchar(20) NOT NULL DEFAULT '大厅' COMMENT '类型：大厅/包房',
+  `alias` varchar(50) DEFAULT NULL COMMENT '桌位别名，如 牡丹阁、VIP1、靠窗位',
   `table_no` varchar(20) NOT NULL COMMENT '桌号，如 A01',
   `capacity` int DEFAULT '4' COMMENT '容纳人数',
   `qr_code` varchar(500) DEFAULT NULL COMMENT '桌位二维码图片',
@@ -266,16 +269,17 @@ CREATE TABLE `dining_table` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_shop_table` (`shop_id`, `table_no`)
+  UNIQUE KEY `uk_shop_table` (`shop_id`, `table_no`),
+  KEY `idx_shop_building` (`shop_id`, `building_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='餐桌表';
 
-INSERT INTO `dining_table` (`id`, `shop_id`, `table_no`, `capacity`, `status`) VALUES
-('t001', '1', 'A01', 2, 1),
-('t002', '1', 'A02', 4, 1),
-('t003', '1', 'A03', 4, 1),
-('t004', '1', 'A05', 6, 1),
-('t005', '1', 'B02', 4, 1),
-('t006', '1', 'B12', 8, 1);
+INSERT INTO `dining_table` (`id`, `shop_id`, `building_no`, `type`, `alias`, `table_no`, `capacity`, `status`) VALUES
+('t001', '1', '1楼', '大厅', '散座A01', 'A01', 2, 1),
+('t002', '1', '1楼', '大厅', '散座A02', 'A02', 4, 1),
+('t003', '1', '1楼', '大厅', '靠窗A03', 'A03', 4, 1),
+('t004', '1', '1楼', '大厅', '圆桌A05', 'A05', 6, 1),
+('t005', '1', '2楼', '大厅', '二楼卡座B02', 'B02', 4, 1),
+('t006', '1', '2楼', '包房', '牡丹阁VIP', 'B12', 8, 1);
 
 -- ------------------------------------------------------------
 -- 优惠券模板表

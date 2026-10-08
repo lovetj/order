@@ -20,7 +20,7 @@ public class DiningTablePublicController {
     @Autowired
     private DiningTableService diningTableService;
 
-    /** 根据桌位ID查询桌位公开信息（桌号、容量、是否启用） */
+    /** 根据桌位ID查询桌位公开信息（楼号、类型、别名、桌号、容量、是否启用） */
     @GetMapping("/{id}")
     public Result<Map<String, Object>> getTable(@PathVariable String id) {
         DiningTable table = diningTableService.getById(id);
@@ -30,6 +30,9 @@ public class DiningTablePublicController {
         Map<String, Object> data = new HashMap<>();
         data.put("id", table.getId());
         data.put("shopId", table.getShopId());
+        data.put("buildingNo", table.getBuildingNo() != null ? table.getBuildingNo() : "1楼");
+        data.put("type", table.getType() != null ? table.getType() : "大厅");
+        data.put("alias", table.getAlias());
         data.put("tableNo", table.getTableNo());
         data.put("capacity", table.getCapacity());
         data.put("status", table.getStatus());
