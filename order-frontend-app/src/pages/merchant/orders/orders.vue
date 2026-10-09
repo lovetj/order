@@ -14,49 +14,114 @@
       </view>
     </view>
 
-    <scroll-view class="layout-body" scroll-y>
-    <template v-if="list.length > 0">
-      <view class="card order-card" v-for="item in list" :key="item.id">
-        <view class="order-head">
-          <view>
-            <text class="table-no">{{item.table}} 桌</text>
-            <text class="order-id">单号 {{item.id}}</text>
-          </view>
-          <text class="order-status" :class="'status-' + item.status">{{item.statusText}}</text>
-        </view>
-
-        <view class="order-body">
-          <view class="order-item" v-for="goods in item.items" :key="goods.name">
-            <text class="item-name">{{goods.name}}</text>
-            <text class="item-num text-sub">x{{goods.count}}</text>
-            <text class="item-price">¥{{goods.amount}}</text>
-          </view>
-        </view>
-
-        <view class="order-remark" v-if="item.remark">备注：{{item.remark}}</view>
-
-        <view class="order-foot">
-          <text class="text-sub">{{item.createTime}}</text>
-          <text class="price">合计 ¥{{item.amount}}</text>
-        </view>
-
-        <view class="order-actions">
-          <view class="act-btn print" @click="printReceipt(item.id)">打印小票</view>
-          <template v-if="item.action">
-            <view class="act-btn ghost" @click="rejectOrder(item.id)">拒单</view>
-            <view
-              class="act-btn primary"
-              @click="handleNext(item.id, item.action.next)"
-            >{{item.action.text}}</view>
-          </template>
-        </view>
-      </view>
-    </template>
-
-    <view v-else class="empty">
-      <view class="empty-icon">📭</view>
-      <view>暂无相关订单</view>
+    <!-- 就餐方式二级筛选栏 -->
+    <view class="filter-type-bar">
+      <view
+        class="filter-chip"
+        :class="{ active: diningTypeFilter === 0 }"
+        @click="switchDiningFilter(0)"
+      >全部方式</view>
+      <view
+        class="filter-chip"
+        :class="{ active: diningTypeFilter === 1 }"
+        @click="switchDiningFilter(1)"
+      >🍽️ 堂食订单</view>
+      <view
+        class="filter-chip"
+        :class="{ active: diningTypeFilter === 2 }"
+        @click="switchDiningFilter(2)"
+      >🛍️ 外带订单</view>
     </view>
+
+    <scroll-view
+      class="layout-body"
+      scroll-y
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="loadMore"
+    >
+      <!-- 页面/Tab切换或初次加载动画 -->
+      <view v-if="loading" class="list-loading list-loading-first">
+        <view class="mini-spinner merchant-spinner"></view>
+        <text class="list-loading-text">正在加载订单...</text>
+      </view>
+
+      <!-- 空状态 -->
+      <view v-else-if="list.length === 0" class="empty">
+        <view class="empty-icon">📭</view>
+        <view class="empty-text">暂无相关订单</view>
+      </view>
+
+      <!-- 订单列表 -->
+      <template v-else>
+        <view class="order-card" v-for="item in list" :key="item.id" @click="showDetail(item)">
+          <view class="order-head">
+            <view class="order-head-left">
+              <text class="dining-badge" :class="item.diningType === 2 ? 'takeout' : 'dinein'">
+                {{ item.diningType === 2 ? '外带' : '堂食' }}
+              </text>
+              <text class="order-table">{{ item.diningType === 2 ? '自提免占桌' : '桌号 ' + item.table }}</text>
+            </view>
+            <view class="order-status" :class="'status-' + item.status">{{item.statusText}}</view>
+          </view>
+
+          <view class="order-items">
+            <view class="order-item" v-for="(goods, gIdx) in item.items" :key="gIdx">
+              <view class="item-name">
+                <text>{{goods.name}}</text>
+                <text class="item-spec" v-if="goods.specText || goods.spec || goods.specName">（{{goods.specText || goods.spec || goods.specName}}）</text>
+              </view>
+              <view class="item-count">x{{goods.count}}</view>
+              <view class="item-price">¥{{goods.amount != null ? goods.amount : goods.price}}</view>
+            </view>
+          </view>
+
+          <view class="order-remark" v-if="item.remark">
+            <text class="remark-tag">备注</text>
+            <text class="remark-text">{{item.remark}}</text>
+          </view>
+
+          <view class="order-foot">
+            <view class="order-time">{{item.createTime}}</view>
+            <view class="order-total">合计 <text class="price">¥{{item.amount}}</text></view>
+          </view>
+
+          <view
+            class="order-actions"
+            v-if="(item.status === 'done' || item.statusText === '已完成') || item.action"
+          >
+            <view
+              class="act-btn"
+              v-if="item.status === 'done' || item.statusText === '已完成'"
+              @click.stop="printReceipt(item)"
+            >打印小票</view>
+            <template v-if="item.action">
+              <view class="act-btn danger" @click.stop="rejectOrder(item.id)">拒单</view>
+              <view
+                class="act-btn primary"
+                @click.stop="handleNext(item.id, item.action.next)"
+              >{{item.action.text}}</view>
+            </template>
+          </view>
+        </view>
+
+        <!-- 加载更多动画 -->
+        <view v-if="loadingMore" class="list-loading list-loading-more">
+          <view class="mini-spinner merchant-spinner"></view>
+          <text class="list-loading-text">加载更多中...</text>
+        </view>
+
+        <!-- 触底无更多提示 -->
+        <view v-if="!loading && !loadingMore && !hasMore && list.length > 0" class="list-end">
+          <view class="end-line"></view>
+          <text class="end-text">已展示全部订单</text>
+          <view class="end-line"></view>
+        </view>
+      </template>
+
+      <!-- 底部安全留白 -->
+      <view class="list-bottom-space"></view>
     </scroll-view>
   </view>
 </template>
@@ -77,9 +142,16 @@ export default {
     return {
       tabs: TABS,
       activeTab: 'pending',
+      diningTypeFilter: 0, // 0全部, 1堂食, 2外带
       list: [],
       counts: {},
-      loading: false
+      pageNum: 1,
+      pageSize: 10,
+      total: 0,
+      hasMore: true,
+      loading: false,
+      loadingMore: false,
+      refreshing: false
     }
   },
   onShow() {
@@ -92,13 +164,13 @@ export default {
       return
     }
     this.loadCounts()
-    this.loadList()
+    this.loadList(true)
   },
   // 底部导航切换时刷新当前页面数据
   onTabRefresh() {
     if (!app.globalData.isLogin()) return
     this.loadCounts()
-    this.loadList()
+    this.loadList(true)
   },
   methods: {
     // 各状态数量（Tab 角标）
@@ -108,24 +180,76 @@ export default {
       }).catch(() => {})
     },
 
+    // 切换就餐方式筛选
+    switchDiningFilter(type) {
+      if (this.diningTypeFilter === type) return
+      this.diningTypeFilter = type
+      this.list = [] // 立即清空，显示加载动画
+      this.loadList(true)
+    },
+
+    // 下拉刷新
+    onRefresh() {
+      this.refreshing = true
+      this.loadCounts()
+      this.loadList(true)
+    },
+
+    // 触底加载更多
+    loadMore() {
+      if (this.loading || this.loadingMore || !this.hasMore) return
+      this.pageNum += 1
+      this.loadList(false)
+    },
+
     // 当前 Tab 订单列表
-    loadList() {
-      this.loading = true
-      api.getAdminOrders({ pageNum: 1, pageSize: 50, status: this.activeTab })
+    loadList(reset = false) {
+      if (reset) {
+        this.pageNum = 1
+        this.hasMore = true
+        if (!this.refreshing) {
+          this.loading = true
+        }
+      } else {
+        if (this.loading || this.loadingMore || !this.hasMore) return
+        this.loadingMore = true
+      }
+
+      const params = {
+        pageNum: this.pageNum,
+        pageSize: this.pageSize,
+        status: this.activeTab
+      }
+      if (this.diningTypeFilter) {
+        params.diningType = this.diningTypeFilter
+      }
+
+      api.getAdminOrders(params)
         .then((page) => {
-          this.list = (page && page.records) || []
+          const records = (page && page.records) || []
+          this.total = (page && page.total) || 0
+          const pages = (page && page.pages) || 0
+          this.list = reset ? records : this.list.concat(records)
+          this.hasMore = this.pageNum < pages
         })
         .catch(() => {
-          this.list = []
+          if (reset) {
+            this.list = []
+          }
+          this.hasMore = false
         })
-        .then(() => {
+        .finally(() => {
           this.loading = false
+          this.loadingMore = false
+          this.refreshing = false
         })
     },
 
     switchTab(key) {
+      if (this.activeTab === key) return
       this.activeTab = key
-      this.loadList()
+      this.list = [] // 立即清空，显示加载动画
+      this.loadList(true)
     },
 
     // 接单 / 出餐：根据服务端返回的 action.next 决定
@@ -162,12 +286,33 @@ export default {
     // 操作后刷新列表与角标
     afterAction() {
       this.loadCounts()
-      this.loadList()
+      this.loadList(true)
     },
 
-    // 查看/打印小票
-    printReceipt(id) {
+    // 查看/打印小票（仅已完成订单）
+    printReceipt(orderOrId) {
+      const id = typeof orderOrId === 'object' && orderOrId ? orderOrId.id : orderOrId
+      const order = typeof orderOrId === 'object' && orderOrId ? orderOrId : this.list.find((o) => o.id === id)
+      if (order && order.status !== 'done' && order.statusText !== '已完成') {
+        uni.showToast({ title: '只有已完成的订单才支持打印小票', icon: 'none' })
+        return
+      }
       uni.navigateTo({ url: `/pages/merchant/receipt/receipt?id=${id}` })
+    },
+
+    // 查看订单详情页
+    showDetail(itemOrId) {
+      const order = typeof itemOrId === 'object' && itemOrId ? itemOrId : this.list.find((o) => o.id === itemOrId)
+      const id = order ? order.id : itemOrId
+      if (!id) return
+      if (order) {
+        try {
+          uni.setStorageSync('preview_order_detail', JSON.stringify(order))
+        } catch (e) {}
+      }
+      uni.navigateTo({
+        url: `/pages/order/detail?id=${id}`
+      })
     }
   }
 }
@@ -181,6 +326,32 @@ export default {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.filter-type-bar {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background: #f8fafc;
+  border-bottom: 1rpx solid #e2e8f0;
+}
+
+.filter-chip {
+  font-size: 24rpx;
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #64748b;
+  border: 1rpx solid #cbd5e1;
+  transition: all 0.2s;
+}
+
+.filter-chip.active {
+  background: #2f80ed;
+  color: #ffffff;
+  border-color: #2f80ed;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(47, 128, 237, 0.25);
 }
 
 .tab {
@@ -226,31 +397,66 @@ export default {
 }
 
 .order-card {
-  padding: 0;
-  overflow: hidden;
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
 }
 
 .order-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 24rpx 28rpx;
-  border-bottom: 1rpx solid #f5f5f5;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f2f2f2;
 }
 
-.table-no {
-  font-size: 34rpx;
-  font-weight: 700;
-  margin-right: 18rpx;
+.order-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.dining-badge {
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+}
+
+.dining-badge.takeout {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1rpx solid #fed7aa;
+}
+
+.dining-badge.dinein {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1rpx solid #bfdbfe;
+}
+
+.order-table {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #111827;
 }
 
 .order-id {
-  font-size: 23rpx;
-  color: #a0a0a0;
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-left: 4rpx;
 }
 
 .order-status {
-  font-size: 27rpx;
+  font-size: 26rpx;
   font-weight: 600;
 }
 
@@ -259,7 +465,7 @@ export default {
 }
 
 .status-cooking {
-  color: #2f80ed;
+  color: #007aff;
 }
 
 .status-done {
@@ -270,78 +476,195 @@ export default {
   color: #999;
 }
 
-.order-body {
-  padding: 18rpx 28rpx;
+.order-items {
+  padding: 20rpx 0;
 }
 
 .order-item {
   display: flex;
   align-items: center;
   padding: 10rpx 0;
-  font-size: 28rpx;
+  font-size: 26rpx;
 }
 
 .item-name {
   flex: 1;
+  color: #444;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.item-num {
-  width: 90rpx;
-  text-align: center;
+.item-spec {
+  font-size: 22rpx;
+  color: #888;
+}
+
+.item-count {
+  color: #999;
+  margin-right: 24rpx;
 }
 
 .item-price {
-  width: 160rpx;
+  color: #333;
+  width: 130rpx;
   text-align: right;
-  font-weight: 600;
 }
 
 .order-remark {
-  padding: 0 28rpx 16rpx;
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  padding: 12rpx 18rpx;
+  background: #fffbf0;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+  border: 1rpx dashed #ffe58f;
+}
+
+.remark-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  background: #fa8c16;
+  color: #fff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.remark-text {
   font-size: 24rpx;
-  color: #ff9500;
+  color: #d46b08;
+  line-height: 1.4;
+  word-break: break-all;
 }
 
 .order-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20rpx 28rpx;
-  background: #fafafa;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f2f2f2;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.order-total .price {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #ff6b35;
 }
 
 .order-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 20rpx;
-  padding: 22rpx 28rpx;
+  margin-top: 24rpx;
+  gap: 16rpx;
 }
 
 .act-btn {
-  padding: 16rpx 44rpx;
+  padding: 14rpx 32rpx;
   border-radius: 999rpx;
-  font-size: 27rpx;
-}
-
-.act-btn.ghost {
-  border: 2rpx solid #d8d8d8;
+  border: 2rpx solid #ddd;
+  font-size: 26rpx;
   color: #666;
+  transition: all 0.2s;
+
+  &:active {
+    opacity: 0.8;
+  }
 }
 
 .act-btn.primary {
-  background: linear-gradient(135deg, #4d95f5, #2f80ed);
-  color: #fff;
+  border-color: #ff6b35;
+  color: #ff6b35;
   font-weight: 600;
 }
 
-.act-btn.print {
-  margin-right: auto;
-  border: 2rpx solid #34c759;
-  color: #34c759;
+.act-btn.danger {
+  border-color: #ff4d4f;
+  color: #ff4d4f;
+}
+
+.act-btn.detail {
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+
+.empty {
+  padding: 160rpx 0;
+  text-align: center;
 }
 
 .empty-icon {
-  font-size: 90rpx;
-  margin-bottom: 20rpx;
+  font-size: 120rpx;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 24rpx;
+}
+
+.list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+  color: #94a3b8;
+}
+
+.list-loading-first {
+  padding: 140rpx 0;
+}
+
+.list-loading-more {
+  padding: 24rpx 0;
+}
+
+.list-loading-text {
+  font-size: 24rpx;
+  margin-left: 14rpx;
+}
+
+.mini-spinner {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
+.merchant-spinner {
+  border: 4rpx solid rgba(47, 128, 237, 0.15);
+  border-top-color: #2f80ed;
+}
+
+.list-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 0;
+}
+
+.end-line {
+  width: 60rpx;
+  height: 1rpx;
+  background: #cbd5e1;
+}
+
+.end-text {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin: 0 16rpx;
+}
+
+.list-bottom-space {
+  height: 120rpx;
+}
+
+@keyframes spinner-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

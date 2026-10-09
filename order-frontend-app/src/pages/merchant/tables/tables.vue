@@ -8,18 +8,23 @@
       </view>
       <view class="overview-divider"></view>
       <view class="overview-item">
-        <text class="overview-num highlight">{{ hallCount }}</text>
-        <text class="overview-label">大厅</text>
+        <text class="overview-num free">{{ freeCount }}</text>
+        <text class="overview-label">空闲</text>
       </view>
       <view class="overview-divider"></view>
       <view class="overview-item">
-        <text class="overview-num room">{{ roomCount }}</text>
-        <text class="overview-label">包房</text>
+        <text class="overview-num in-use">{{ inUseCount }}</text>
+        <text class="overview-label">使用中</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-num shared">{{ sharedCount }}</text>
+        <text class="overview-label">拼桌中</text>
       </view>
       <view class="overview-divider"></view>
       <view class="overview-item">
         <text class="overview-num active">{{ activeCount }}</text>
-        <text class="overview-label">启用中</text>
+        <text class="overview-label">已启用</text>
       </view>
     </view>
 
@@ -113,9 +118,33 @@
             <text class="capacity-icon">👥</text>
             <text class="capacity-text">{{ item.capacity }} 人位</text>
           </view>
+
+          <!-- 就餐使用状态标识 -->
+          <view class="dining-status-bar" :class="'status-' + (item.useStatus || 0)">
+            <text class="dining-status-dot"></text>
+            <text class="dining-status-text">
+              {{ getUseStatusText(item) }}
+            </text>
+          </view>
         </view>
 
-        <!-- 底部快捷操作栏 -->
+        <!-- 业务操作栏：清台、拼桌、换桌 -->
+        <view class="biz-ops" v-if="item.status">
+          <view class="biz-btn clean" :class="{ highlight: (item.useStatus || 0) > 0 }" @click.stop="handleCleanTable(item)">
+            <text class="biz-icon">🧹</text>
+            <text class="biz-text">清台</text>
+          </view>
+          <view class="biz-btn share" :class="{ active: item.useStatus === 2 }" @click.stop="handleShareTable(item)">
+            <text class="biz-icon">🤝</text>
+            <text class="biz-text">{{ item.useStatus === 2 ? '拼桌中' : '拼桌' }}</text>
+          </view>
+          <view class="biz-btn transfer" @click.stop="openTransferDialog(item)">
+            <text class="biz-icon">🔄</text>
+            <text class="biz-text">换桌</text>
+          </view>
+        </view>
+
+        <!-- 底部快捷设置栏 -->
         <view class="table-ops">
           <view class="op qr" @click.stop="showQrcode(item.id)">
             <text class="op-icon">🔗</text>
@@ -318,6 +347,64 @@
         </view>
       </view>
     </view>
+
+    <!-- 换桌弹窗 -->
+    <view v-if="transferVisible" class="mask" @click="closeTransferDialog">
+      <view class="dialog" @click.stop="noop">
+        <view class="dialog-head">
+          <view class="dialog-title-wrap">
+            <text class="dialog-title-icon">🔄</text>
+            <text class="dialog-title">桌位调换 / 换桌</text>
+          </view>
+          <text class="dialog-close" @click="closeTransferDialog">×</text>
+        </view>
+        <view class="dialog-body">
+          <view class="transfer-source-box" v-if="transferSource">
+            <text class="transfer-label">当前原桌位：</text>
+            <text class="transfer-from-no">{{ transferSource.tableNo }}</text>
+            <text class="transfer-from-info" v-if="transferSource.alias">({{ transferSource.alias }})</text>
+            <text class="transfer-from-status">[{{ getUseStatusText(transferSource) }}]</text>
+          </view>
+
+          <view class="form-group" style="margin-top: 24rpx;">
+            <view class="form-label-row">
+              <text class="form-label">选择目标桌位</text>
+              <text class="form-required">*</text>
+            </view>
+            <scroll-view class="transfer-target-scroll" scroll-y>
+              <view
+                class="target-table-item"
+                :class="{
+                  selected: transferTargetNo === t.tableNo,
+                  disabled: t.tableNo === (transferSource && transferSource.tableNo) || !t.status
+                }"
+                v-for="t in list"
+                :key="t.id"
+                @click="selectTransferTarget(t)"
+              >
+                <view class="target-item-left">
+                  <text class="target-no">{{ t.tableNo }}</text>
+                  <text class="target-alias" v-if="t.alias">({{ t.alias }})</text>
+                  <text class="target-sub">{{ t.buildingNo }} · {{ t.type }} ({{ t.capacity }}人)</text>
+                </view>
+                <view class="target-item-right">
+                  <text class="target-status-badge" :class="'status-' + (t.useStatus || 0)">
+                    {{ getUseStatusText(t) }}
+                  </text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
+          <view class="link-tip" style="margin-top: 16rpx;">
+            💡 换桌后，原桌的所有未完成堂食订单将自动迁移至目标桌位，并自动同步两桌的占用状态。
+          </view>
+        </view>
+        <view class="dialog-foot">
+          <view class="dialog-btn cancel" @click="closeTransferDialog">取消</view>
+          <view class="dialog-btn ok" @click="confirmTransfer">确定换桌</view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -354,10 +441,27 @@ export default {
       // 点餐链接弹窗
       qrcodeVisible: false,
       qrcodeLink: '',
-      activeTable: null
+      activeTable: null,
+
+      // 换桌弹窗
+      transferVisible: false,
+      transferSource: null,
+      transferTargetNo: ''
     }
   },
   computed: {
+    // 空闲桌位数量
+    freeCount() {
+      return this.list.filter((t) => !t.useStatus || t.useStatus === 0).length
+    },
+    // 使用中桌位数量
+    inUseCount() {
+      return this.list.filter((t) => t.useStatus === 1).length
+    },
+    // 拼桌中桌位数量
+    sharedCount() {
+      return this.list.filter((t) => t.useStatus === 2).length
+    },
     // 大厅桌位数
     hallCount() {
       return this.list.filter((t) => (t.type || '大厅') === '大厅').length
@@ -431,12 +535,120 @@ export default {
           type: t.type || '大厅',
           alias: t.alias || '',
           capacity: t.capacity || 4,
-          status: t.status != null ? t.status : 1
+          status: t.status != null ? t.status : 1,
+          useStatus: t.useStatus != null ? Number(t.useStatus) : 0,
+          currentOrderCount: t.currentOrderCount || 0
         }))
       }).catch(() => {
         this.list = []
       }).then(() => {
         this.loading = false
+      })
+    },
+
+    // 桌位状态文案
+    getUseStatusText(table) {
+      if (!table) return '空闲'
+      const status = table.useStatus != null ? Number(table.useStatus) : 0
+      const count = table.currentOrderCount || 0
+      if (status === 1) {
+        return count > 0 ? `使用中 (${count}单)` : '使用中'
+      } else if (status === 2) {
+        return count > 0 ? `拼桌中 (${count}单)` : '拼桌中'
+      } else if (status === 3) {
+        return '待清台'
+      }
+      return '空闲'
+    },
+
+    // 清台操作
+    handleCleanTable(table) {
+      const name = `${table.tableNo}${table.alias ? ` (${table.alias})` : ''}`
+      const count = table.currentOrderCount || 0
+      const content = count > 0
+        ? `该桌当前关联 ${count} 笔订单，清台将释放桌位并重置为空闲。确认清台吗？`
+        : `确认对桌位【${name}】进行清台重置吗？`
+      uni.showModal({
+        title: '清台确认',
+        content,
+        confirmText: '确定清台',
+        confirmColor: '#2f80ed',
+        success: (res) => {
+          if (!res.confirm) return
+          api.cleanTable(table.tableNo).then(() => {
+            uni.showToast({ title: '清台成功', icon: 'success' })
+            this.loadList()
+          }).catch(() => {})
+        }
+      })
+    },
+
+    // 拼桌操作
+    handleShareTable(table) {
+      const name = `${table.tableNo}${table.alias ? ` (${table.alias})` : ''}`
+      const isShared = table.useStatus === 2
+      const content = isShared
+        ? `桌位【${name}】当前已经是拼桌模式，是否确认再次设定？`
+        : `确定将桌位【${name}】设为拼桌模式吗？开启后允许多批顾客共享同一桌位独立下单。`
+      uni.showModal({
+        title: '拼桌模式设置',
+        content,
+        confirmText: '设为拼桌',
+        confirmColor: '#722ed1',
+        success: (res) => {
+          if (!res.confirm) return
+          api.shareTable(table.tableNo).then(() => {
+            uni.showToast({ title: '已开启拼桌模式', icon: 'success' })
+            this.loadList()
+          }).catch(() => {})
+        }
+      })
+    },
+
+    // 换桌操作
+    openTransferDialog(table) {
+      this.transferSource = table
+      this.transferTargetNo = ''
+      this.transferVisible = true
+    },
+
+    closeTransferDialog() {
+      this.transferVisible = false
+      this.transferSource = null
+      this.transferTargetNo = ''
+    },
+
+    selectTransferTarget(table) {
+      if (table.tableNo === (this.transferSource && this.transferSource.tableNo) || !table.status) {
+        return
+      }
+      this.transferTargetNo = table.tableNo
+    },
+
+    confirmTransfer() {
+      if (!this.transferSource) return
+      if (!this.transferTargetNo) {
+        uni.showToast({ title: '请选择目标桌位', icon: 'none' })
+        return
+      }
+      const fromNo = this.transferSource.tableNo
+      const toNo = this.transferTargetNo
+      uni.showModal({
+        title: '换桌确认',
+        content: `确定将桌位【${fromNo}】的未完成订单全部转移至【${toNo}】吗？`,
+        confirmText: '确定转移',
+        confirmColor: '#2f80ed',
+        success: (res) => {
+          if (!res.confirm) return
+          api.transferTable({
+            fromTableNo: fromNo,
+            toTableNo: toNo
+          }).then(() => {
+            uni.showToast({ title: '换桌成功', icon: 'success' })
+            this.closeTransferDialog()
+            this.loadList()
+          }).catch(() => {})
+        }
       })
     },
 
@@ -649,11 +861,20 @@ export default {
   &.highlight {
     color: #2f80ed;
   }
+  &.free {
+    color: #00b578;
+  }
+  &.in-use {
+    color: #ff7d00;
+  }
+  &.shared {
+    color: #722ed1;
+  }
   &.room {
     color: #e65100;
   }
   &.active {
-    color: #00b578;
+    color: #2f80ed;
   }
 }
 
@@ -897,6 +1118,100 @@ export default {
   .capacity-text {
     font-size: 24rpx;
     color: #777777;
+  }
+}
+
+/* 就餐使用状态标识条 */
+.dining-status-bar {
+  margin-top: 14rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+
+  .dining-status-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+  }
+
+  &.status-0 {
+    background: #e6f7ec;
+    color: #00b578;
+    .dining-status-dot { background: #00b578; }
+  }
+  &.status-1 {
+    background: #fff7e6;
+    color: #fa8c16;
+    .dining-status-dot { background: #fa8c16; }
+  }
+  &.status-2 {
+    background: #f9f0ff;
+    color: #722ed1;
+    .dining-status-dot { background: #722ed1; }
+  }
+  &.status-3 {
+    background: #fff1f0;
+    color: #f5222d;
+    .dining-status-dot { background: #f5222d; }
+  }
+}
+
+/* 业务操作栏：清台、拼桌、换桌 */
+.biz-ops {
+  display: flex;
+  align-items: center;
+  background: #fbfcfe;
+  border-top: 1rpx dashed #e8ecf2;
+  padding: 10rpx 8rpx;
+  gap: 8rpx;
+}
+
+.biz-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  height: 52rpx;
+  background: #ffffff;
+  border: 1rpx solid #e2e8f0;
+  border-radius: 10rpx;
+  transition: all 0.15s ease;
+
+  .biz-icon {
+    font-size: 22rpx;
+  }
+  .biz-text {
+    font-size: 22rpx;
+    font-weight: 500;
+    color: #333333;
+  }
+
+  &.clean {
+    &.highlight {
+      background: #fff1f0;
+      border-color: #ffa39e;
+      .biz-text { color: #f5222d; }
+    }
+  }
+
+  &.share {
+    &.active {
+      background: #f9f0ff;
+      border-color: #d3adf7;
+      .biz-text { color: #722ed1; }
+    }
+  }
+
+  &.transfer {
+    &:active {
+      background: #eaf2fd;
+    }
   }
 }
 
@@ -1319,5 +1634,106 @@ export default {
   font-size: 22rpx;
   color: #8c8c8c;
   line-height: 1.5;
+}
+
+/* 换桌弹窗样式 */
+.transfer-source-box {
+  background: #f7f9fc;
+  border-radius: 14rpx;
+  padding: 18rpx 20rpx;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+
+  .transfer-label {
+    font-size: 26rpx;
+    color: #666;
+  }
+  .transfer-from-no {
+    font-size: 32rpx;
+    font-weight: 700;
+    color: #1f1f1f;
+  }
+  .transfer-from-info {
+    font-size: 24rpx;
+    color: #888;
+  }
+  .transfer-from-status {
+    font-size: 24rpx;
+    color: #2f80ed;
+    font-weight: 500;
+  }
+}
+
+.transfer-target-scroll {
+  max-height: 400rpx;
+  margin-top: 10rpx;
+}
+
+.target-table-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 20rpx;
+  border-radius: 14rpx;
+  background: #f8fafc;
+  margin-bottom: 12rpx;
+  border: 2rpx solid transparent;
+  transition: all 0.2s ease;
+
+  &.selected {
+    background: #eaf2fd;
+    border-color: #2f80ed;
+  }
+
+  &.disabled {
+    opacity: 0.45;
+  }
+
+  .target-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+
+    .target-no {
+      font-size: 30rpx;
+      font-weight: 700;
+      color: #1f1f1f;
+    }
+    .target-alias {
+      font-size: 24rpx;
+      color: #ff6b00;
+    }
+    .target-sub {
+      font-size: 22rpx;
+      color: #8c8c8c;
+    }
+  }
+
+  .target-item-right {
+    .target-status-badge {
+      font-size: 22rpx;
+      padding: 4rpx 14rpx;
+      border-radius: 12rpx;
+
+      &.status-0 {
+        background: #e6f7ec;
+        color: #00b578;
+      }
+      &.status-1 {
+        background: #fff7e6;
+        color: #fa8c16;
+      }
+      &.status-2 {
+        background: #f9f0ff;
+        color: #722ed1;
+      }
+      &.status-3 {
+        background: #fff1f0;
+        color: #f5222d;
+      }
+    }
+  }
 }
 </style>

@@ -1,6 +1,7 @@
 package com.order.controller;
 
 import com.order.common.Result;
+import com.order.dto.TableTransferDTO;
 import com.order.entity.DiningTable;
 import com.order.service.DiningTableService;
 import com.order.util.JwtUtil;
@@ -8,6 +9,7 @@ import com.order.util.ShopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 /**
@@ -69,6 +71,42 @@ public class DiningTableController {
                                @RequestHeader(value = "Authorization", required = false) String authorization) {
         String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
         diningTableService.deleteTable(id, shopId);
+        return Result.success();
+    }
+
+    /** 清台 */
+    @PutMapping("/{id}/clean")
+    public Result<Void> clean(@PathVariable String id,
+                              @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
+        if (shopId == null) {
+            return Result.error(403, "无法识别店铺信息，请重新登录");
+        }
+        diningTableService.cleanTable(id, shopId);
+        return Result.success();
+    }
+
+    /** 拼桌设置 */
+    @PutMapping("/{id}/share")
+    public Result<Void> share(@PathVariable String id,
+                              @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
+        if (shopId == null) {
+            return Result.error(403, "无法识别店铺信息，请重新登录");
+        }
+        diningTableService.shareTable(id, shopId);
+        return Result.success();
+    }
+
+    /** 换桌操作 */
+    @PostMapping("/transfer")
+    public Result<Void> transfer(@Valid @RequestBody TableTransferDTO dto,
+                                 @RequestHeader(value = "Authorization", required = false) String authorization) {
+        String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
+        if (shopId == null) {
+            return Result.error(403, "无法识别店铺信息，请重新登录");
+        }
+        diningTableService.transferTable(dto, shopId);
         return Result.success();
     }
 }

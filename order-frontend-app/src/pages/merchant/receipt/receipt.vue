@@ -84,7 +84,29 @@ export default {
       this.loading = true
       api.getReceipt(this.orderId).then((data) => {
         this.receipt = data || {}
-      }).catch(() => {}).then(() => {
+        if (this.receipt.statusText && this.receipt.statusText !== '已完成') {
+          uni.showModal({
+            title: '提示',
+            content: '该订单当前尚未完成，只有已完成的订单才支持打印小票。',
+            showCancel: false,
+            confirmText: '返回',
+            success: () => {
+              uni.navigateBack()
+            }
+          })
+        }
+      }).catch((err) => {
+        const msg = (err && (err.message || err.msg)) || '只有已完成的订单才支持打印小票'
+        uni.showModal({
+          title: '提示',
+          content: msg,
+          showCancel: false,
+          confirmText: '返回',
+          success: () => {
+            uni.navigateBack()
+          }
+        })
+      }).then(() => {
         this.loading = false
       })
     },

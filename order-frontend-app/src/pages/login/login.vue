@@ -21,6 +21,35 @@
 
     <!-- ==================== 顾客端：手机号登录 ==================== -->
     <view v-if="role === 'customer'" class="panel">
+      <!-- 就餐方式选择：堂食 vs 外带 -->
+      <view class="dining-type-selector">
+        <view
+          class="dining-tab"
+          :class="{ active: diningType === 1 }"
+          @click="selectDiningType(1)"
+        >
+          <text class="dining-tab-icon">🍽️</text>
+          <text class="dining-tab-text">堂食用餐</text>
+        </view>
+        <view
+          class="dining-tab"
+          :class="{ active: diningType === 2 }"
+          @click="selectDiningType(2)"
+        >
+          <text class="dining-tab-icon">🛍️</text>
+          <text class="dining-tab-text">外带自提</text>
+        </view>
+      </view>
+      <view class="dining-tip-box" v-if="diningType === 2">
+        <text class="dining-tip-text">🥡 外带自提无需占用餐桌，直接选餐自提</text>
+      </view>
+      <view class="dining-tip-box" v-else-if="tableNo">
+        <text class="dining-tip-text">🍽️ 堂食用餐已绑定桌号：{{tableNo}}</text>
+      </view>
+      <view class="dining-tip-box" v-else>
+        <text class="dining-tip-text">ℹ️ 堂食用餐可点击右上角扫桌码绑定桌位</text>
+      </view>
+
       <!-- 小程序端：优先微信手机号授权自动获取，拒绝/失败后回退手动输入 -->
       <!-- #ifdef MP-WEIXIN -->
       <template v-if="!manualPhone">
@@ -117,6 +146,8 @@ export default {
       // customer | merchant
       role: 'customer',
       tableNo: '',
+      // 就餐方式：1 堂食，2 外带
+      diningType: (app.globalData && app.globalData.diningType) || (uni.getStorageSync('diningType') ? Number(uni.getStorageSync('diningType')) : 1),
       logging: false,
       // 顾客端：是否回退为手动输入（H5 默认手动；小程序默认自动授权）
       manualPhone: false,
@@ -157,11 +188,25 @@ export default {
   },
 
   methods: {
+    // 选择就餐方式
+    selectDiningType(type) {
+      this.diningType = type
+      if (app.globalData && app.globalData.setDiningType) {
+        app.globalData.setDiningType(type)
+      } else {
+        uni.setStorageSync('diningType', type)
+      }
+    },
+
     // 顾客端：扫码识别店铺/桌位，刷新当前桌号与登录成功后的回跳地址
     async scanTable() {
       const { ok, tableNo } = await scanOrderContext(app)
       if (!ok) return
       this.tableNo = tableNo || app.globalData.tableNo || ''
+      this.diningType = 1
+      if (app.globalData && app.globalData.setDiningType) {
+        app.globalData.setDiningType(1)
+      }
       // 扫码后桌位可能变化，更新登录成功回跳地址，携带最新桌位上下文
       app.globalData.__loginBack = `/pages/menu/menu?shopId=${encodeURIComponent(app.globalData.shopId || '')}&tableId=${encodeURIComponent(app.globalData.tableId || '')}&tableNo=${encodeURIComponent(app.globalData.tableNo || '')}`
     },
@@ -409,6 +454,59 @@ export default {
   border-radius: 28rpx;
   padding: 50rpx 40rpx;
   box-shadow: 0 10rpx 36rpx rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- 就餐方式切换 ---------- */
+.dining-type-selector {
+  display: flex;
+  background: #f4f5f8;
+  border-radius: 18rpx;
+  padding: 8rpx;
+  margin-bottom: 24rpx;
+}
+
+.dining-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18rpx 0;
+  border-radius: 14rpx;
+  transition: all 0.2s ease;
+}
+
+.dining-tab.active {
+  background: #ffffff;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.dining-tab-icon {
+  font-size: 32rpx;
+  margin-right: 10rpx;
+}
+
+.dining-tab-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #555;
+}
+
+.dining-tab.active .dining-tab-text {
+  color: #ff6b35;
+}
+
+.dining-tip-box {
+  background: #fff8f5;
+  border: 1rpx solid #ffe8de;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.dining-tip-text {
+  font-size: 22rpx;
+  color: #ff6b35;
+  line-height: 1.4;
 }
 
 /* ---------- 表单 ---------- */

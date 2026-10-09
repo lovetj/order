@@ -22,38 +22,80 @@
       >{{item.name}}</view>
     </view>
 
-    <scroll-view class="layout-body" scroll-y>
-    <view v-if="list.length === 0" class="empty">
-      <view class="empty-icon">📭</view>
-      <view class="empty-text">暂无订单</view>
-      <view class="empty-btn" @click="goMenu">去点餐</view>
-    </view>
+    <scroll-view
+      class="layout-body"
+      scroll-y
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="loadMore"
+    >
+      <!-- 页面/Tab切换或初次加载动画 -->
+      <view v-if="loading" class="list-loading list-loading-first">
+        <view class="mini-spinner customer-spinner"></view>
+        <text class="list-loading-text">正在加载订单...</text>
+      </view>
 
-    <view class="order-card" v-for="item in list" :key="item.id">
-      <view class="order-head" @click="showDetail(item.id)">
-        <view class="order-table">桌号 {{item.table}}</view>
-        <view class="order-status" :class="'status-' + item.status">{{item.statusText}}</view>
+      <!-- 空状态 -->
+      <view v-else-if="list.length === 0" class="empty">
+        <view class="empty-icon">📭</view>
+        <view class="empty-text">暂无订单</view>
+        <view class="empty-btn" @click="goMenu">去点餐</view>
       </view>
-      <view class="order-items" @click="showDetail(item.id)">
-        <view class="order-item" v-for="g in item.items" :key="g.name">
-          <view class="item-name">{{g.name}}</view>
-          <view class="item-count">x{{g.count}}</view>
-          <view class="item-price">¥{{g.price}}</view>
+
+      <!-- 订单列表 -->
+      <template v-else>
+        <view class="order-card" v-for="item in list" :key="item.id" @click="showDetail(item)">
+          <view class="order-head">
+            <view class="order-head-left">
+              <text class="dining-badge" :class="item.diningType === 2 ? 'takeout' : 'dinein'">
+                {{item.diningType === 2 ? '外带' : '堂食'}}
+              </text>
+              <text class="order-table">{{item.diningType === 2 ? '自提免占桌' : '桌号 ' + item.table}}</text>
+            </view>
+            <view class="order-status" :class="'status-' + item.status">{{item.statusText}}</view>
+          </view>
+          <view class="order-items">
+            <view class="order-item" v-for="(g, idx) in item.items" :key="idx">
+              <view class="item-name">
+                <text>{{g.name}}</text>
+                <text class="item-spec" v-if="g.specText || g.spec || g.specName">（{{g.specText || g.spec || g.specName}}）</text>
+              </view>
+              <view class="item-count">x{{g.count}}</view>
+              <view class="item-price">¥{{g.amount != null ? g.amount : g.price}}</view>
+            </view>
+          </view>
+          <view class="order-foot">
+            <view class="order-time">{{item.createTime}}</view>
+            <view class="order-total">合计 <text class="price">¥{{item.amount}}</text></view>
+          </view>
+          <view
+            v-if="item.status === 'pending' || item.status === 'cooking'"
+            class="order-actions"
+          >
+            <view
+              class="act-btn"
+              @click.stop="cancelOrder(item.id)"
+            >取消订单</view>
+          </view>
         </view>
-      </view>
-      <view class="order-foot">
-        <view class="order-time">{{item.createTime}}</view>
-        <view class="order-total">合计 <text class="price">¥{{item.amount}}</text></view>
-      </view>
-      <view class="order-actions">
-        <view
-          v-if="item.status === 'pending' || item.status === 'cooking'"
-          class="act-btn"
-          @click="cancelOrder(item.id)"
-        >取消订单</view>
-        <view class="act-btn primary" @click="showDetail(item.id)">订单详情</view>
-      </view>
-    </view>
+
+        <!-- 加载更多动画 -->
+        <view v-if="loadingMore" class="list-loading list-loading-more">
+          <view class="mini-spinner customer-spinner"></view>
+          <text class="list-loading-text">加载更多中...</text>
+        </view>
+
+        <!-- 触底无更多提示 -->
+        <view v-if="!loading && !loadingMore && !hasMore && list.length > 0" class="list-end">
+          <view class="end-line"></view>
+          <text class="end-text">已展示全部订单</text>
+          <view class="end-line"></view>
+        </view>
+      </template>
+
+      <!-- 底部安全留白 -->
+      <view class="list-bottom-space"></view>
     </scroll-view>
   </view>
 </template>
@@ -77,7 +119,13 @@ export default {
       tabs: TABS,
       current: 'all',
       list: [],
+      pageNum: 1,
+      pageSize: 10,
+      total: 0,
+      hasMore: true,
       loading: false,
+      loadingMore: false,
+      refreshing: false,
       needScan: false
     }
   },
@@ -93,7 +141,7 @@ export default {
     }
     this.needScan = !hasCustomerContext(app)
     if (this.needScan) return
-    this.loadList()
+    this.loadList(true)
   },
 
   methods: {
@@ -102,7 +150,7 @@ export default {
       if (!app.globalData.isLogin()) return
       this.needScan = !hasCustomerContext(app)
       if (this.needScan) return
-      this.loadList()
+      this.loadList(true)
     },
 
     // 扫码识别店铺/桌号后刷新页面
@@ -110,44 +158,84 @@ export default {
       const { ok } = await scanOrderContext(app)
       if (!ok) return
       this.needScan = false
-      this.loadList()
+      this.loadList(true)
     },
 
-    loadList() {
-      this.loading = true
-      api.getOrders({ pageNum: 1, pageSize: 50, status: this.current })
+    // 下拉刷新
+    onRefresh() {
+      this.refreshing = true
+      this.loadList(true)
+    },
+
+    // 触底加载更多
+    loadMore() {
+      if (this.loading || this.loadingMore || !this.hasMore) return
+      this.pageNum += 1
+      this.loadList(false)
+    },
+
+    loadList(reset = false) {
+      if (reset) {
+        this.pageNum = 1
+        this.hasMore = true
+        if (!this.refreshing) {
+          this.loading = true
+        }
+      } else {
+        if (this.loading || this.loadingMore || !this.hasMore) return
+        this.loadingMore = true
+      }
+
+      const params = {
+        pageNum: this.pageNum,
+        pageSize: this.pageSize,
+        status: this.current
+      }
+
+      api.getOrders(params)
         .then((page) => {
-          this.list = (page && page.records) || []
+          const records = (page && page.records) || []
+          this.total = (page && page.total) || 0
+          const pages = (page && page.pages) || 0
+          this.list = reset ? records : this.list.concat(records)
+          this.hasMore = this.pageNum < pages
         })
         .catch(() => {
-          this.list = []
+          if (reset) {
+            this.list = []
+          }
+          this.hasMore = false
         })
-        .then(() => this.loading = false)
+        .finally(() => {
+          this.loading = false
+          this.loadingMore = false
+          this.refreshing = false
+        })
     },
 
     switchTab(key) {
+      if (this.current === key) return
       this.current = key
+      this.list = [] // 切换Tab立即清空旧数据，触发加载动画
       if (this.needScan) return
-      this.loadList()
+      this.loadList(true)
     },
 
     goMenu() {
       uni.reLaunch({ url: '/pages/menu/menu' })
     },
 
-    showDetail(id) {
-      const order = this.list.find((o) => o.id === id)
-      if (!order) return
-      const items = (order.items || []).map((i) => {
-        const spec = i.specText ? `（${i.specText}）` : ''
-        return `${i.name}${spec} x${i.count}`
-      }).join('\n')
-      uni.showModal({
-        title: `订单 ${order.id}`,
-        content: `${items}\n\n合计：¥${order.amount}\n桌号：${order.table}\n状态：${order.statusText}`,
-        showCancel: false,
-        confirmText: '知道了',
-        confirmColor: '#ff6b35'
+    showDetail(itemOrId) {
+      const order = typeof itemOrId === 'object' && itemOrId ? itemOrId : this.list.find((o) => o.id === itemOrId)
+      const id = order ? order.id : itemOrId
+      if (!id) return
+      if (order) {
+        try {
+          uni.setStorageSync('preview_order_detail', JSON.stringify(order))
+        } catch (e) {}
+      }
+      uni.navigateTo({
+        url: `/pages/order/detail?id=${id}`
       })
     },
 
@@ -162,7 +250,7 @@ export default {
           if (!res.confirm) return
           api.cancelOrder(id, '顾客取消').then(() => {
             uni.showToast({ title: '已取消', icon: 'none' })
-            this.loadList()
+            this.loadList(true)
           }).catch(() => {})
         }
       })
@@ -274,6 +362,12 @@ export default {
   margin: 24rpx;
   padding: 28rpx;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
 }
 
 .order-head {
@@ -282,6 +376,31 @@ export default {
   justify-content: space-between;
   padding-bottom: 20rpx;
   border-bottom: 1rpx solid #f2f2f2;
+}
+
+.order-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.dining-badge {
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+}
+
+.dining-badge.takeout {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1rpx solid #fed7aa;
+}
+
+.dining-badge.dinein {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1rpx solid #bfdbfe;
 }
 
 .order-table {
@@ -312,6 +431,14 @@ export default {
 .item-name {
   flex: 1;
   color: #444;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.item-spec {
+  font-size: 22rpx;
+  color: #888;
 }
 
 .item-count {
@@ -357,5 +484,66 @@ export default {
 .act-btn.primary {
   border-color: #ff6b35;
   color: #ff6b35;
+}
+
+.list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+  color: #999;
+}
+
+.list-loading-first {
+  padding: 120rpx 0;
+}
+
+.list-loading-more {
+  padding: 24rpx 0;
+}
+
+.list-loading-text {
+  font-size: 24rpx;
+  margin-left: 14rpx;
+}
+
+.mini-spinner {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
+.customer-spinner {
+  border: 4rpx solid rgba(255, 107, 53, 0.15);
+  border-top-color: #ff6b35;
+}
+
+.list-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 0;
+}
+
+.end-line {
+  width: 60rpx;
+  height: 1rpx;
+  background: #e0e0e0;
+}
+
+.end-text {
+  font-size: 22rpx;
+  color: #aaa;
+  margin: 0 16rpx;
+}
+
+.list-bottom-space {
+  height: 120rpx;
+}
+
+@keyframes spinner-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

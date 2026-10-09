@@ -51,6 +51,9 @@ public class ReceiptServiceImpl implements ReceiptService {
         if (order == null) {
             throw new RuntimeException("订单不存在");
         }
+        if (order.getStatus() == null || order.getStatus() != 2) {
+            throw new RuntimeException("只有已完成的订单才支持打印小票");
+        }
         // 小票门店信息取自订单所属店铺，保证多店铺下打印正确门店
         Shop shop = shopService.getShop(order.getShopId());
 

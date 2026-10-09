@@ -28,6 +28,9 @@ public class Order implements Serializable {
     /** 桌号，如 A01 */
     private String tableNo;
 
+    /** 就餐方式 1堂食 2外带 */
+    private Integer diningType;
+
     /** 就餐人数 */
     private Integer peopleCount;
 

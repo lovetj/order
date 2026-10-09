@@ -13,7 +13,10 @@ import java.util.List;
 public class OrderCreateDTO {
 
     /** 桌号 */
-    @NotNull(message = "桌号不能为空")
+    /** 就餐方式 1堂食 2外带（默认1） */
+    private Integer diningType;
+
+    /** 桌号（堂食必填，外带可空） */
     private String tableNo;
 
     /** 就餐人数 */

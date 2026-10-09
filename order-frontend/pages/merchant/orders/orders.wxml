@@ -38,7 +38,7 @@
       </view>
 
       <view class="order-actions">
-        <view class="act-btn print" data-id="{{item.id}}" bindtap="printReceipt">打印小票</view>
+        <view class="act-btn print" wx:if="{{item.status === 'done' || item.statusText === '已完成'}}" data-id="{{item.id}}" bindtap="printReceipt">打印小票</view>
         <block wx:if="{{item.action}}">
           <view class="act-btn ghost" data-id="{{item.id}}" bindtap="rejectOrder">拒单</view>
           <view

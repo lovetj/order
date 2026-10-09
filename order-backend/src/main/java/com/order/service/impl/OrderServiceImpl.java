@@ -16,10 +16,12 @@ import com.order.mapper.DishMapper;
 import com.order.mapper.OrderItemMapper;
 import com.order.mapper.OrderMapper;
 import com.order.service.CouponService;
+import com.order.service.DiningTableService;
 import com.order.service.MemberService;
 import com.order.service.OrderService;
 import com.order.util.FileUrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -42,6 +44,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private static final int STATUS_DONE = 2;
     private static final int STATUS_CANCELED = 3;
 
+    /** 就餐方式：1堂食 2外带 */
+    public static final int DINING_TYPE_DINE_IN = 1;
+    public static final int DINING_TYPE_TAKEOUT = 2;
+
     /** 积分抵扣比例：100 积分抵 1 元 */
     private static final int POINTS_PER_YUAN_DEDUCT = 100;
 
@@ -63,6 +69,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Autowired
     private FileConfigProperties fileConfigProperties;
 
+    @Autowired
+    @Lazy
+    private DiningTableService diningTableService;
+
+    @Autowired
+    private com.order.mapper.UserMapper userMapper;
+
     // ==================== 顾客下单 ====================
 
     @Override
@@ -72,10 +85,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new RuntimeException("用户未登录");
         }
         if (!StringUtils.hasText(shopId)) {
-            throw new RuntimeException("未识别店铺信息，请重新扫描桌位二维码");
+            throw new RuntimeException("未识别店铺信息，请重新扫描桌位二维码或选择店铺");
         }
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new RuntimeException("请先选择菜品");
+        }
+
+        int diningType = dto.getDiningType() != null && dto.getDiningType() == DINING_TYPE_TAKEOUT
+                ? DINING_TYPE_TAKEOUT : DINING_TYPE_DINE_IN;
+
+        String tableNo = dto.getTableNo();
+        if (diningType == DINING_TYPE_DINE_IN) {
+            if (!StringUtils.hasText(tableNo)) {
+                throw new RuntimeException("堂食下单桌号不能为空");
+            }
+            tableNo = tableNo.trim().toUpperCase();
+        } else {
+            // 外带不强制要求物理桌号，不占用桌位
+            if (!StringUtils.hasText(tableNo)) {
+                tableNo = "TAKEOUT";
+            }
         }
 
         // 1. 批量查询菜品，校验上架与库存
@@ -145,12 +174,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setOrderNo(generateOrderNo());
         order.setUserId(userId);
         order.setShopId(shopId);
-        order.setTableNo(dto.getTableNo());
+        order.setTableNo(tableNo);
+        order.setDiningType(diningType);
         order.setPeopleCount(dto.getPeopleCount());
         order.setProductTotal(productTotal);
         order.setDiscountAmount(BigDecimal.ZERO);
         order.setPayAmount(productTotal);
-        order.setPayType(99); // 未支付（堂食下单即做，可按需接入支付）
+        order.setPayType(99); // 未支付
         order.setStatus(STATUS_PENDING);
         order.setRemark(dto.getRemark());
         save(order);
@@ -168,7 +198,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             if (maxUsable.compareTo(BigDecimal.ZERO) < 0) {
                 maxUsable = BigDecimal.ZERO;
             }
-            // 最多抵扣到 0 元
             int maxPoints = maxUsable.multiply(BigDecimal.valueOf(POINTS_PER_YUAN_DEDUCT))
                     .setScale(0, RoundingMode.DOWN).intValue();
             int usePoints = Math.min(dto.getUsePoints(), maxPoints);
@@ -203,6 +232,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
         }
 
+        // 7. 如果是堂食，联动刷新餐桌使用状态；外带则不占用桌位
+        if (diningType == DINING_TYPE_DINE_IN && StringUtils.hasText(tableNo)) {
+            diningTableService.refreshTableStatus(shopId, tableNo);
+        }
+
         return getDetail(order.getId(), shopId);
     }
 
@@ -210,16 +244,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     public PageResult<OrderVO> pageForCustomer(Integer pageNum, Integer pageSize, String status, String userId, String shopId) {
-        return pageOrders(pageNum, pageSize, status, userId, shopId);
+        return pageOrders(pageNum, pageSize, status, userId, shopId, null);
     }
 
     @Override
-    public PageResult<OrderVO> pageForMerchant(String shopId, Integer pageNum, Integer pageSize, String status) {
-        return pageOrders(pageNum, pageSize, status, null, shopId);
+    public PageResult<OrderVO> pageForMerchant(String shopId, Integer pageNum, Integer pageSize, String status, Integer diningType) {
+        return pageOrders(pageNum, pageSize, status, null, shopId, diningType);
     }
 
     private PageResult<OrderVO> pageOrders(Integer pageNum, Integer pageSize, String status,
-                                           String userId, String shopId) {
+                                           String userId, String shopId, Integer diningType) {
         int num = pageNum != null && pageNum > 0 ? pageNum : 1;
         int size = pageSize != null && pageSize > 0 ? pageSize : 10;
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
@@ -234,12 +268,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (statusCode != null) {
             wrapper.eq(Order::getStatus, statusCode);
         }
+        if (diningType != null && diningType > 0) {
+            wrapper.eq(Order::getDiningType, diningType);
+        }
         wrapper.orderByDesc(Order::getCreateTime);
 
         Page<Order> page = new Page<>(num, size);
         page(page, wrapper);
-        List<OrderVO> records = page.getRecords().stream()
-                .map(this::toVOWithItems)
+        List<Order> orders = page.getRecords();
+        Set<String> userIds = orders.stream()
+                .map(Order::getUserId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Map<String, String> userPhoneMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<com.order.entity.User> users = userMapper.selectBatchIds(userIds);
+            if (users != null) {
+                for (com.order.entity.User u : users) {
+                    if (u != null && u.getId() != null) {
+                        userPhoneMap.put(u.getId(), u.getPhone());
+                    }
+                }
+            }
+        }
+        List<OrderVO> records = orders.stream()
+                .map(o -> this.toVOWithItems(o, userPhoneMap.get(o.getUserId())))
                 .collect(Collectors.toList());
         return new PageResult<>(records, page.getTotal(), page.getPages(), page.getCurrent(), page.getSize());
     }
@@ -257,13 +310,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         return toVOWithItems(order);
     }
 
-    /**
-     * 按「订单号或主键ID」查询订单
-     *
-     * 前端 OrderVO.id 返回的是 orderNo（业务订单号，如 D20261003001），
-     * 而主键 id 是 UUID。此处先按 orderNo 匹配，再兜底按主键匹配，
-     * 保证详情/接单/出餐/拒单/取消等接口在两种入参下都能正确工作。
-     */
     private Order findOrder(String id) {
         if (!StringUtils.hasText(id)) {
             return null;
@@ -337,6 +383,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setStatus(STATUS_COOKING);
         order.setAcceptTime(LocalDateTime.now());
         updateById(order);
+
+        // 联动餐桌状态
+        if (order.getDiningType() != null && order.getDiningType() == DINING_TYPE_DINE_IN && StringUtils.hasText(order.getTableNo())) {
+            diningTableService.refreshTableStatus(shopId, order.getTableNo());
+        }
     }
 
     @Override
@@ -349,8 +400,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setStatus(STATUS_DONE);
         order.setFinishTime(LocalDateTime.now());
         updateById(order);
+
         // 订单完成：累加会员积分与消费额、刷新等级
         memberService.addOrderReward(order.getUserId(), order.getShopId(), order.getPayAmount());
+
+        // 联动餐桌状态刷新
+        if (order.getDiningType() != null && order.getDiningType() == DINING_TYPE_DINE_IN && StringUtils.hasText(order.getTableNo())) {
+            diningTableService.refreshTableStatus(shopId, order.getTableNo());
+        }
     }
 
     @Override
@@ -366,11 +423,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         updateById(order);
         // 退回已使用的优惠券
         couponService.refundCoupon(order.getId());
+
+        // 联动餐桌状态刷新
+        if (order.getDiningType() != null && order.getDiningType() == DINING_TYPE_DINE_IN && StringUtils.hasText(order.getTableNo())) {
+            diningTableService.refreshTableStatus(shopId, order.getTableNo());
+        }
     }
 
-    /**
-     * 校验订单存在且归属当前店铺，防止跨店操作
-     */
     private Order requireOwnedOrder(String id, String shopId) {
         Order order = findOrder(id);
         if (order == null) {
@@ -392,7 +451,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (StringUtils.hasText(userId) && !userId.equals(order.getUserId())) {
             throw new RuntimeException("无权操作该订单");
         }
-        // 店铺隔离：顾客只能取消当前店铺的订单
         if (StringUtils.hasText(shopId) && !shopId.equals(order.getShopId())) {
             throw new RuntimeException("无权操作该订单");
         }
@@ -403,14 +461,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCancelTime(LocalDateTime.now());
         order.setCancelReason(StringUtils.hasText(reason) ? reason : "顾客取消");
         updateById(order);
-        // 退回已使用的优惠券
         couponService.refundCoupon(order.getId());
+
+        if (order.getDiningType() != null && order.getDiningType() == DINING_TYPE_DINE_IN && StringUtils.hasText(order.getTableNo())) {
+            diningTableService.refreshTableStatus(order.getShopId(), order.getTableNo());
+        }
     }
 
     // ==================== VO 转换 ====================
 
     private OrderVO toVOWithItems(Order order) {
-        OrderVO vo = toVO(order);
+        return toVOWithItems(order, null);
+    }
+
+    private OrderVO toVOWithItems(Order order, String phone) {
+        OrderVO vo = toVO(order, phone);
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
         vo.setItems(items.stream().map(this::toItemVO).collect(Collectors.toList()));
@@ -418,10 +483,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     private OrderVO toVO(Order order) {
+        return toVO(order, null);
+    }
+
+    private OrderVO toVO(Order order, String phone) {
         OrderVO vo = new OrderVO();
         vo.setId(order.getOrderNo() != null ? order.getOrderNo() : order.getId());
         vo.setOrderNo(order.getOrderNo());
         vo.setTable(order.getTableNo());
+        int diningType = order.getDiningType() != null ? order.getDiningType() : DINING_TYPE_DINE_IN;
+        vo.setDiningType(diningType);
+        vo.setDiningTypeText(diningType == DINING_TYPE_TAKEOUT ? "外带" : "堂食");
         vo.setStatus(toStatusString(order.getStatus()));
         vo.setStatusText(toStatusText(order.getStatus()));
         vo.setCreateTime(order.getCreateTime() == null ? null : order.getCreateTime().format(DATE_TIME));
@@ -430,6 +502,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         vo.setPeopleCount(order.getPeopleCount());
         vo.setRemark(order.getRemark());
         vo.setAction(toAction(order.getStatus()));
+        if (StringUtils.hasText(phone)) {
+            vo.setPhone(phone);
+            vo.setUserPhone(phone);
+        } else if (StringUtils.hasText(order.getUserId()) && userMapper != null) {
+            com.order.entity.User user = userMapper.selectById(order.getUserId());
+            if (user != null) {
+                vo.setPhone(user.getPhone());
+                vo.setUserPhone(user.getPhone());
+            }
+        }
         return vo;
     }
 
@@ -445,7 +527,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         return vo;
     }
 
-    /** 0待接单 1制作中 2已完成 3已取消 -> 前端字符串状态 */
     private String toStatusString(Integer status) {
         if (status == null) {
             return null;
@@ -482,12 +563,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
     }
 
-    /** 前端字符串状态 -> 数据库状态码 */
     private Integer toStatusCode(String status) {
         if (!StringUtils.hasText(status) || "all".equalsIgnoreCase(status)) {
             return null;
         }
-        switch (status) {
+        switch (status.toLowerCase()) {
             case "pending":
                 return STATUS_PENDING;
             case "cooking":
@@ -501,23 +581,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
     }
 
-    /** 管理端下一步操作按钮 */
     private OrderVO.Action toAction(Integer status) {
         if (status == null) {
             return null;
         }
-        if (status == STATUS_PENDING) {
-            return new OrderVO.Action("接单", "cooking", "制作中");
+        switch (status) {
+            case STATUS_PENDING:
+                return new OrderVO.Action("接单制作", "cooking", "制作中");
+            case STATUS_COOKING:
+                return new OrderVO.Action("出餐完成", "done", "已完成");
+            default:
+                return null;
         }
-        if (status == STATUS_COOKING) {
-            return new OrderVO.Action("出餐", "done", "已完成");
-        }
-        return null;
     }
 
-    /** 生成订单号：D + yyyyMMddHHmmss + 3位随机数 */
     private String generateOrderNo() {
-        String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        return "D" + time + RandomUtil.randomNumbers(3);
+        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return "D" + dateStr + RandomUtil.randomNumbers(3);
     }
 }

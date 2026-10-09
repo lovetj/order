@@ -182,7 +182,8 @@ CREATE TABLE `order` (
   `order_no` varchar(50) NOT NULL COMMENT '订单号，如 D20261003001',
   `user_id` varchar(128) NOT NULL COMMENT '下单用户ID',
   `shop_id` varchar(128) DEFAULT NULL COMMENT '门店ID',
-  `table_no` varchar(20) NOT NULL COMMENT '桌号(前端 table)',
+  `table_no` varchar(50) DEFAULT '' COMMENT '桌号(前端 table，外带时为TAKEOUT或空)',
+  `dining_type` tinyint NOT NULL DEFAULT '1' COMMENT '就餐方式 1堂食 2外带',
   `people_count` int DEFAULT NULL COMMENT '就餐人数',
   `product_total` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '菜品小计',
   `discount_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '优惠金额',
@@ -203,6 +204,7 @@ CREATE TABLE `order` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`status`),
   KEY `idx_table_no` (`table_no`),
+  KEY `idx_dining_type` (`dining_type`),
   KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='订单表';
 
@@ -266,20 +268,23 @@ CREATE TABLE `dining_table` (
   `capacity` int DEFAULT '4' COMMENT '容纳人数',
   `qr_code` varchar(500) DEFAULT NULL COMMENT '桌位二维码图片',
   `status` tinyint DEFAULT '1' COMMENT '状态 0停用 1启用',
+  `use_status` tinyint NOT NULL DEFAULT '0' COMMENT '使用状态 0空闲 1使用中 2拼桌中 3待清台',
+  `current_order_count` int NOT NULL DEFAULT '0' COMMENT '当前进行中订单数',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_shop_table` (`shop_id`, `table_no`),
-  KEY `idx_shop_building` (`shop_id`, `building_no`)
+  KEY `idx_shop_building` (`shop_id`, `building_no`),
+  KEY `idx_use_status` (`use_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='餐桌表';
 
-INSERT INTO `dining_table` (`id`, `shop_id`, `building_no`, `type`, `alias`, `table_no`, `capacity`, `status`) VALUES
-('t001', '1', '1楼', '大厅', '散座A01', 'A01', 2, 1),
-('t002', '1', '1楼', '大厅', '散座A02', 'A02', 4, 1),
-('t003', '1', '1楼', '大厅', '靠窗A03', 'A03', 4, 1),
-('t004', '1', '1楼', '大厅', '圆桌A05', 'A05', 6, 1),
-('t005', '1', '2楼', '大厅', '二楼卡座B02', 'B02', 4, 1),
-('t006', '1', '2楼', '包房', '牡丹阁VIP', 'B12', 8, 1);
+INSERT INTO `dining_table` (`id`, `shop_id`, `building_no`, `type`, `alias`, `table_no`, `capacity`, `status`, `use_status`, `current_order_count`) VALUES
+('t001', '1', '1楼', '大厅', '散座A01', 'A01', 2, 1, 1, 1),
+('t002', '1', '1楼', '大厅', '散座A02', 'A02', 4, 1, 0, 0),
+('t003', '1', '1楼', '大厅', '靠窗A03', 'A03', 4, 1, 1, 1),
+('t004', '1', '1楼', '大厅', '圆桌A05', 'A05', 6, 1, 0, 0),
+('t005', '1', '2楼', '大厅', '二楼卡座B02', 'B02', 4, 1, 0, 0),
+('t006', '1', '2楼', '包房', '牡丹阁VIP', 'B12', 8, 1, 0, 0);
 
 -- ------------------------------------------------------------
 -- 优惠券模板表

@@ -2,16 +2,40 @@
   <view class="menu-page">
     <bottom-nav />
 
-    <!-- 顶部状态栏：桌号提示与快捷重扫 -->
+    <!-- 顶部状态栏：就餐方式切换、桌号提示与快捷重扫 -->
     <view class="top-bar" v-if="!needScan">
-      <view class="table-badge">
-        <text class="table-icon">🍽️</text>
-        <text class="table-label">当前桌位：</text>
+      <view class="dining-switch">
+        <view
+          class="switch-btn"
+          :class="{ active: diningType === 1 }"
+          @click="changeDiningType(1)"
+        >
+          <text class="btn-icon">🍽️</text>
+          <text>堂食</text>
+        </view>
+        <view
+          class="switch-btn"
+          :class="{ active: diningType === 2 }"
+          @click="changeDiningType(2)"
+        >
+          <text class="btn-icon">🛍️</text>
+          <text>外带</text>
+        </view>
+      </view>
+
+      <view class="table-badge" v-if="diningType === 1">
+        <text class="table-icon">🪑</text>
+        <text class="table-label">桌位：</text>
         <text class="table-no">{{currentTableText}}</text>
       </view>
+      <view class="table-badge takeout-badge" v-else>
+        <text class="table-icon">🥡</text>
+        <text class="table-label">免占桌</text>
+      </view>
+
       <view class="rescan-btn" @click="scanThenReload">
         <text class="rescan-icon">📷</text>
-        <text class="rescan-text">重新扫码</text>
+        <text class="rescan-text">{{ diningType === 1 ? '换桌/扫码' : '扫码' }}</text>
       </view>
     </view>
 
@@ -232,6 +256,7 @@ export default {
   data() {
     return {
       tableNo: (app.globalData && app.globalData.tableNo) || uni.getStorageSync('tableNo') || '',
+      diningType: (app.globalData && app.globalData.diningType) || (uni.getStorageSync('diningType') ? Number(uni.getStorageSync('diningType')) : 1),
       _resolvedTableId: '',
       categories: [],
       currentCategory: 'all',
@@ -291,6 +316,20 @@ export default {
   },
 
   methods: {
+    // 切换就餐方式
+    changeDiningType(type) {
+      this.diningType = type
+      if (app.globalData && app.globalData.setDiningType) {
+        app.globalData.setDiningType(type)
+      } else {
+        uni.setStorageSync('diningType', type)
+      }
+      uni.showToast({
+        title: type === 1 ? '已切换为堂食用餐' : '已切换为外带自提',
+        icon: 'none'
+      })
+    },
+
     // 桌号回查：按桌位ID查询桌号，及时同步响应式 tableNo 与 globalData
     resolveTableNo() {
       const tableId = (app.globalData && app.globalData.tableId) || uni.getStorageSync('tableId') || ''
@@ -536,15 +575,20 @@ export default {
         uni.showToast({ title: '请先选择菜品', icon: 'none' })
         return
       }
-      const tableNo = app.globalData.tableNo
-      if (!tableNo) {
-        uni.showToast({ title: '请先扫码获取桌号', icon: 'none' })
+      const diningType = this.diningType || (app.globalData && app.globalData.diningType) || 1
+      let tableNo = app.globalData.tableNo || this.tableNo || ''
+      if (diningType === 1 && !tableNo) {
+        uni.showToast({ title: '堂食点餐请先扫码获取桌号', icon: 'none' })
         return
       }
+      if (diningType === 2 && !tableNo) {
+        tableNo = 'TAKEOUT'
+      }
       const { cart, cartAmount, cartCount } = this
+      const diningLabel = diningType === 2 ? '【外带自提】' : `【堂食·${tableNo}桌】`
       // 自动匹配最优优惠券并展示
       api.getBestCoupon(cartAmount).then((coupon) => {
-        let content = `共 ${cartCount} 件，合计 ¥${cartAmount}，桌号 ${tableNo}`
+        let content = `${diningLabel}\n共 ${cartCount} 件，合计 ¥${cartAmount}`
         let userCouponId = ''
         if (coupon) {
           userCouponId = coupon.id
@@ -567,7 +611,12 @@ export default {
                 specText: entry.specText || ''
               }
             })
-            const payload = { tableNo, items, peopleCount: null }
+            const payload = {
+              tableNo,
+              diningType,
+              items,
+              peopleCount: null
+            }
             if (userCouponId) {
               payload.userCouponId = userCouponId
             }
@@ -585,7 +634,7 @@ export default {
         // 优惠券查询失败不影响下单
         uni.showModal({
           title: '确认下单',
-          content: `共 ${cartCount} 件，合计 ¥${cartAmount}，桌号 ${tableNo}`,
+          content: `${diningLabel}\n共 ${cartCount} 件，合计 ¥${cartAmount}`,
           confirmText: '确认下单',
           confirmColor: '#2468f2',
           success: (res) => {
@@ -599,7 +648,12 @@ export default {
                 specText: entry.specText || ''
               }
             })
-            api.createOrder({ tableNo, items, peopleCount: null })
+            api.createOrder({
+              tableNo,
+              diningType,
+              items,
+              peopleCount: null
+            })
               .then(() => {
                 this.showCart = false
                 this.updateCart({})
@@ -635,18 +689,58 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14rpx 24rpx;
+  padding: 12rpx 20rpx;
   background: #ffffff;
   border-bottom: 1rpx solid #f1f5f9;
   z-index: 10;
+  gap: 12rpx;
+}
+
+.dining-switch {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4rpx;
+  border-radius: 24rpx;
+}
+
+.switch-btn {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  color: #64748b;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.switch-btn.active {
+  background: #2468f2;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(36, 104, 242, 0.3);
+}
+
+.switch-btn .btn-icon {
+  font-size: 22rpx;
+  margin-right: 4rpx;
 }
 
 .table-badge {
   display: flex;
   align-items: center;
   background: #eff6ff;
-  padding: 8rpx 20rpx;
+  padding: 8rpx 18rpx;
   border-radius: 30rpx;
+}
+
+.table-badge.takeout-badge {
+  background: #fff7ed;
+}
+
+.table-badge.takeout-badge .table-label {
+  color: #ea580c;
+  font-weight: 600;
 }
 
 .table-icon {

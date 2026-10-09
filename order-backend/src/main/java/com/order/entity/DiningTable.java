@@ -43,6 +43,14 @@ public class DiningTable implements Serializable {
     /** 状态 0停用 1启用 */
     private Integer status;
 
+    /** 使用状态 0空闲 1使用中 2拼桌中 3待清台 */
+    @TableField("use_status")
+    private Integer useStatus;
+
+    /** 当前进行中订单数 */
+    @TableField("current_order_count")
+    private Integer currentOrderCount;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

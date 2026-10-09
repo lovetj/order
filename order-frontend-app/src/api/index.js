@@ -81,6 +81,9 @@ export default {
   updateTable: (data) => http.put('/api/table', data),
   toggleTable: (id) => http.put(`/api/table/${id}/toggle`),
   deleteTable: (id) => http.del(`/api/table/${id}`),
+  cleanTable: (id) => http.put(`/api/table/${id}/clean`),
+  shareTable: (id) => http.put(`/api/table/${id}/share`),
+  transferTable: (data) => http.post('/api/table/transfer', data),
   // 顾客端公开查询：按桌位ID回查桌号（扫码进入点餐页时使用）
   getTableByCustomerId: (id) => http.get(`/api/dining-table/${id}`),
 

@@ -15,6 +15,10 @@ public class OrderVO {
     private String orderNo;
     /** 前端使用 table */
     private String table;
+    /** 就餐方式 1堂食 2外带 */
+    private Integer diningType;
+    /** 就餐方式文案：堂食/外带 */
+    private String diningTypeText;
     /** 前端使用字符串状态：pending / cooking / done / canceled */
     private String status;
     /** 前端使用中文状态文案 */
@@ -24,6 +28,9 @@ public class OrderVO {
     private BigDecimal productTotal;
     private Integer peopleCount;
     private String remark;
+    /** 用户手机号 */
+    private String phone;
+    private String userPhone;
     /** 管理端使用的下一步操作：{ text, next, nextText } */
     private Action action;
     private List<OrderItemVO> items;

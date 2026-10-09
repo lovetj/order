@@ -11,9 +11,9 @@ import java.util.Map;
 public interface OrderService extends IService<Order> {
 
     /**
-     * 顾客下单（扫码点餐）
+     * 顾客下单（扫码点餐 / 外带）
      *
-     * @param shopId 下单所属店铺（来自扫码桌位）
+     * @param shopId 下单所属店铺（来自扫码桌位或所选店铺）
      * @return 新订单VO（含 id / orderNo / amount 等，便于前端跳转订单页）
      */
     OrderVO createOrder(OrderCreateDTO dto, String userId, String shopId);
@@ -26,9 +26,9 @@ public interface OrderService extends IService<Order> {
     PageResult<OrderVO> pageForCustomer(Integer pageNum, Integer pageSize, String status, String userId, String shopId);
 
     /**
-     * 管理端订单分页列表（仅本店订单）
+     * 管理端订单分页列表（仅本店订单，支持按就餐方式 diningType 筛选：1堂食 2外带）
      */
-    PageResult<OrderVO> pageForMerchant(String shopId, Integer pageNum, Integer pageSize, String status);
+    PageResult<OrderVO> pageForMerchant(String shopId, Integer pageNum, Integer pageSize, String status, Integer diningType);
 
     /**
      * 订单详情

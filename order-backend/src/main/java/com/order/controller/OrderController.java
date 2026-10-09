@@ -104,17 +104,18 @@ public class OrderController {
 
     // ==================== 店家端（仅本店） ====================
 
-    /** 店家订单分页列表（仅本店） */
+    /** 店家订单分页列表（仅本店，支持就餐方式筛选：1堂食 2外带） */
     @GetMapping("/admin/list")
     public Result<PageResult<OrderVO>> adminList(@RequestParam(defaultValue = "1") Integer pageNum,
                                                  @RequestParam(defaultValue = "10") Integer pageSize,
                                                  @RequestParam(required = false) String status,
+                                                 @RequestParam(required = false) Integer diningType,
                                                  @RequestHeader(value = "Authorization", required = false) String authorization) {
         String shopId = ShopContext.resolveMerchantShopId(jwtUtil, authorization);
         if (shopId == null) {
             return Result.error(403, "无法识别店铺信息，请重新登录");
         }
-        return Result.success(orderService.pageForMerchant(shopId, pageNum, pageSize, status));
+        return Result.success(orderService.pageForMerchant(shopId, pageNum, pageSize, status, diningType));
     }
 
     /** 店家订单各状态数量（Tab 角标，仅本店） */

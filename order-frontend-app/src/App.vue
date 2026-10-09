@@ -8,6 +8,8 @@ export default {
     shopId: '',
     tableNo: '',
     tableId: '',
+    // 就餐方式：1 堂食，2 外带（默认 1）
+    diningType: uni.getStorageSync('diningType') ? Number(uni.getStorageSync('diningType')) : 1,
     // 购物车：{ [dishId|specText]: { id, key, name, price, image, hasImage, imageUrl, specIds, specText, count } }
     cart: {},
     // 登录用户信息
@@ -90,6 +92,12 @@ export default {
       } else {
         uni.removeStorageSync('tableId')
       }
+    },
+
+    // 设置就餐方式（1堂食，2外带）
+    setDiningType(diningType) {
+      this.diningType = Number(diningType) === 2 ? 2 : 1
+      uni.setStorageSync('diningType', this.diningType)
     },
 
     // 切换店铺时清空该店铺相关的内存缓存（购物车、会员信息），避免串店展示
