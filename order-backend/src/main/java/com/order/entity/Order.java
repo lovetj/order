@@ -42,8 +42,20 @@ public class Order implements Serializable {
     /** 实付金额 */
     private BigDecimal payAmount;
 
-    /** 支付方式 1微信 2支付宝 99未支付 */
+    /** 支付方式 1微信线上 2支付宝线上 3线下微信 4线下支付宝 5线下其他 99未支付 */
     private Integer payType;
+
+    /** 支付大类 1线上支付 2线下支付 */
+    private Integer payMode;
+
+    /** 支付状态 0待支付 1支付中 2已支付 3支付失败/已关闭 */
+    private Integer payStatus;
+
+    /** 线下支付收款二维码快照URL */
+    private String payQrcode;
+
+    /** 关联支付流水号 */
+    private String paymentNo;
 
     /**
      * 状态：0待接单 1制作中 2已完成 3已取消
@@ -54,6 +66,12 @@ public class Order implements Serializable {
     private String remark;
 
     private LocalDateTime payTime;
+
+    /** 线下支付店员确认到账时间 */
+    private LocalDateTime offlinePayTime;
+
+    /** 线下支付确认操作人/店员ID */
+    private String offlinePayOperator;
 
     /** 接单时间 */
     private LocalDateTime acceptTime;

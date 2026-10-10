@@ -1,5 +1,5 @@
 <template>
-  <view class="role-page">
+  <view v-if="!redirecting" class="role-page">
     <view class="hero">
       <view class="title">扫码点餐</view>
       <view class="subtitle">请选择你的身份进入</view>
@@ -34,15 +34,93 @@ const app = getApp()
 export default {
   data() {
     return {
-      tableNo: ''
+      tableNo: '',
+      redirecting: false
     }
   },
 
-  onLoad() {
-    this.tableNo = app.globalData.tableNo || ''
+  onLoad(options) {
+    if (this.checkAndRedirect(options)) {
+      return
+    }
+    const incoming = this.resolveIncomingParams(options)
+    this.tableNo = incoming.tableNo || ''
+  },
+
+  onShow() {
+    if (this.checkAndRedirect()) {
+      return
+    }
+    const incoming = this.resolveIncomingParams()
+    this.tableNo = incoming.tableNo || ''
   },
 
   methods: {
+    // 解析当前访问链接中显式携带的参数（仅针对当次进入，不读取历史 storage 避免误跳）
+    resolveIncomingParams(options) {
+      const result = { shopId: '', tableId: '', tableNo: '' }
+      const opt = options || {}
+      if (opt.shopId) result.shopId = String(opt.shopId).trim()
+      if (opt.tableId) result.tableId = String(opt.tableId).trim()
+      if (opt.tableNo) result.tableNo = String(opt.tableNo).trim()
+
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.location) {
+        const parseQueryString = (qs) => {
+          if (!qs) return
+          const qIdx = qs.indexOf('?')
+          if (qIdx < 0) return
+          const searchParams = new URLSearchParams(qs.substring(qIdx))
+          if (searchParams.get('shopId') && !result.shopId) {
+            result.shopId = searchParams.get('shopId').trim()
+          }
+          if (searchParams.get('tableId') && !result.tableId) {
+            result.tableId = searchParams.get('tableId').trim()
+          }
+          if (searchParams.get('tableNo') && !result.tableNo) {
+            result.tableNo = searchParams.get('tableNo').trim()
+          }
+        }
+        parseQueryString(window.location.search || '')
+        parseQueryString(window.location.hash || '')
+      }
+      // #endif
+
+      return result
+    },
+
+    // 检查是否具备桌位上下文（仅当次扫桌位二维码进入时才直达顾客端）
+    checkAndRedirect(options) {
+      const incoming = this.resolveIncomingParams(options)
+      const tableId = incoming.tableId
+      const tableNo = incoming.tableNo
+
+      // 仅当当次访问链接中显式带有桌位信息（扫桌位二维码）时，才自动直达顾客端；默认启动根路径直接停留在角色选择页
+      if (tableId || tableNo) {
+        const shopId = incoming.shopId || app.globalData.shopId || uni.getStorageSync('shopId') || '1'
+        this.redirecting = true
+        app.globalData.setRole('customer')
+        if (shopId) app.globalData.setShopId(shopId)
+        if (tableId) app.globalData.setTableId(tableId)
+        if (tableNo) app.globalData.setTableNo(tableNo)
+
+        const targetUrl = `/pages/menu/menu?shopId=${encodeURIComponent(shopId)}&tableId=${encodeURIComponent(tableId)}&tableNo=${encodeURIComponent(tableNo)}`
+
+        if (app.globalData.isLogin()) {
+          // 已登录：直接跳转顾客端点餐页
+          uni.reLaunch({ url: targetUrl })
+        } else {
+          // 未登录：直接跳转顾客登录页，登录完成后自动回跳点餐页
+          app.globalData.__loginBack = targetUrl
+          uni.reLaunch({
+            url: `/pages/login/login?role=customer&back=${encodeURIComponent(targetUrl)}`
+          })
+        }
+        return true
+      }
+      return false
+    },
+
     chooseRole(role) {
       // 顾客 -> 快速登录；店家 -> 账号密码登录
       uni.navigateTo({ url: `/pages/login/login?role=${role}` })

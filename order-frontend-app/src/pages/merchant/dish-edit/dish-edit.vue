@@ -1,5 +1,14 @@
 <template>
   <view class="page" @click="clearActive">
+    <!-- 未保存修改浮动高亮提示条 -->
+    <view v-if="hasUnsaved" class="unsaved-alert-bar">
+      <view class="unsaved-alert-left">
+        <text class="alert-icon">⚠️</text>
+        <text class="alert-text">当前菜品信息已修改，离开前请记得保存！</text>
+      </view>
+      <view class="alert-btn" @click.stop="submit">立即保存</view>
+    </view>
+
     <!-- 图片上传 -->
     <view class="card">
       <view class="label">菜品图片 <text class="required">*</text></view>
@@ -201,15 +210,23 @@
 
     <!-- 操作按钮（固定悬浮底部）：取消/删除/保存，横向平排 -->
     <view class="btn-wrap">
-      <view v-if="hasUnsaved" class="unsaved-tip">有未保存的修改</view>
+      <view v-if="hasUnsaved" class="unsaved-hint-tag">
+        <text class="dot"></text>
+        <text>有未保存的更改，点击下方保存生效</text>
+      </view>
       <button class="cancel-btn" :disabled="submitting || deleting" @click="cancel">取消</button>
       <button v-if="isEdit" class="delete-btn" :disabled="deleting || submitting" @click="remove">
         <view v-if="deleting" class="btn-spinner danger"></view>
         <text>{{deleting ? '删除中...' : '删除菜品'}}</text>
       </button>
-      <button class="btn-primary submit-btn" :class="{ 'save-btn-active': hasUnsaved }" :disabled="submitting || deleting || uploading" @click="submit">
+      <button
+        class="btn-primary submit-btn"
+        :class="{ 'is-modified': hasUnsaved, 'save-btn-active': hasUnsaved }"
+        :disabled="submitting || deleting || uploading"
+        @click="submit"
+      >
         <view v-if="submitting" class="btn-spinner"></view>
-        <text>{{submitting ? '保存中...' : (isEdit ? '保存修改' : '确认新增')}}</text>
+        <text>{{submitting ? '保存中...' : (isEdit ? (hasUnsaved ? '保存修改 (待保存)' : '保存修改') : (hasUnsaved ? '确认新增 (待保存)' : '确认新增'))}}</text>
       </button>
     </view>
 
@@ -257,6 +274,7 @@ export default {
       uploading: false,
       // 是否存在未保存的改动：用于离页提醒与「未保存」提示
       hasUnsaved: false,
+      forceBack: false,
       // 图片是否被用户改动过：未改动或已保存重置为 false
       imageDirty: false,
       // 当前激活的选项（显示左右移动按钮）
@@ -279,6 +297,29 @@ export default {
       uni.disableAlertBeforeUnload()
       this._alertEnabled = false
     }
+  },
+  onBackPress(options) {
+    if (this.forceBack) {
+      return false
+    }
+    if (this.hasUnsaved) {
+      uni.showModal({
+        title: '未保存提醒',
+        content: '当前菜品信息已修改，尚未保存生效。是否放弃更改并返回？',
+        confirmText: '放弃离开',
+        cancelText: '继续保存',
+        confirmColor: '#999999',
+        cancelColor: '#ff6b35',
+        success: (res) => {
+          if (res.confirm) {
+            this.forceBack = true
+            uni.navigateBack()
+          }
+        }
+      })
+      return true
+    }
+    return false
   },
   methods: {
     /**
@@ -947,6 +988,92 @@ export default {
   font-size: 28rpx;
 }
 
+/* ==================== 未保存修改提醒条 ==================== */
+.unsaved-alert-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #fff2e8 0%, #ffe7ba 100%);
+  border-bottom: 2rpx solid #ffd591;
+  padding: 16rpx 24rpx;
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  animation: fadeInDown 0.25s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.unsaved-alert-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.unsaved-alert-left .alert-icon {
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+
+.unsaved-alert-left .alert-text {
+  font-size: 24rpx;
+  color: #d4380d;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.alert-btn {
+  background: #ff4d4f;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 8rpx 18rpx;
+  border-radius: 24rpx;
+  flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(255, 77, 79, 0.35);
+}
+
+.unsaved-hint-tag {
+  flex: 0 0 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8rpx;
+  font-size: 22rpx;
+  color: #fa541c;
+}
+
+.unsaved-hint-tag .dot {
+  width: 12rpx;
+  height: 12rpx;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  animation: pulseDot 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
 /* 底部操作栏：固定悬浮在页面下方，取消/删除与保存横向平排 */
 .btn-wrap {
   position: fixed;
@@ -1162,9 +1289,11 @@ export default {
 }
 
 /* 有未保存改动时高亮，吸引用户点击保存 */
-.save-btn-active {
-  background: #ff6b35 !important;
-  box-shadow: 0 6rpx 16rpx rgba(255, 107, 53, 0.35) !important;
+.save-btn-active,
+.submit-btn.is-modified {
+  background: linear-gradient(135deg, #ff4d4f 0%, #f5222d 100%) !important;
+  box-shadow: 0 6rpx 20rpx rgba(245, 34, 45, 0.4) !important;
+  transition: all 0.25s ease;
 }
 
 .cancel-btn {

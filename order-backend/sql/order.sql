@@ -188,10 +188,16 @@ CREATE TABLE `order` (
   `product_total` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '菜品小计',
   `discount_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '优惠金额',
   `pay_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '实付金额(前端 amount)',
-  `pay_type` tinyint DEFAULT '99' COMMENT '支付方式 1微信 2支付宝 99未支付',
+  `pay_type` tinyint DEFAULT '99' COMMENT '支付方式 1微信线上 2支付宝线上 3线下微信 4线下支付宝 5线下其他 99未支付',
+  `pay_mode` tinyint NOT NULL DEFAULT '1' COMMENT '支付大类 1线上支付 2线下支付',
+  `pay_status` tinyint NOT NULL DEFAULT '0' COMMENT '支付状态 0待支付 1支付中 2已支付 3支付失败/已关闭',
+  `pay_qrcode` varchar(500) DEFAULT NULL COMMENT '线下支付收款二维码快照URL',
+  `payment_no` varchar(64) DEFAULT NULL COMMENT '关联支付流水号',
   `status` tinyint DEFAULT '0' COMMENT '状态 0待接单 1制作中 2已完成 3已取消',
   `remark` varchar(255) DEFAULT NULL COMMENT '备注',
   `pay_time` datetime DEFAULT NULL COMMENT '支付时间',
+  `offline_pay_time` datetime DEFAULT NULL COMMENT '线下支付店员确认到账时间',
+  `offline_pay_operator` varchar(64) DEFAULT NULL COMMENT '线下支付确认操作人/店员ID',
   `accept_time` datetime DEFAULT NULL COMMENT '接单时间',
   `finish_time` datetime DEFAULT NULL COMMENT '完成时间',
   `cancel_time` datetime DEFAULT NULL COMMENT '取消时间',
@@ -203,6 +209,9 @@ CREATE TABLE `order` (
   KEY `idx_shop_id` (`shop_id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`status`),
+  KEY `idx_pay_status` (`pay_status`),
+  KEY `idx_pay_type` (`pay_type`),
+  KEY `idx_payment_no` (`payment_no`),
   KEY `idx_table_no` (`table_no`),
   KEY `idx_dining_type` (`dining_type`),
   KEY `idx_create_time` (`create_time`)
@@ -529,5 +538,68 @@ CREATE TABLE `user_points` (
   PRIMARY KEY (`user_id`, `shop_id`),
   KEY `idx_shop_id` (`shop_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户积分账本表（按商家隔离）';
+
+-- ------------------------------------------------------------
+-- 店铺支付管理配置表（多店铺隔离）
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `shop_payment_config`;
+CREATE TABLE `shop_payment_config` (
+  `id` varchar(128) NOT NULL COMMENT '主键ID',
+  `shop_id` varchar(128) NOT NULL COMMENT '所属店铺ID（多店铺隔离，唯一）',
+  `offline_pay_enabled` tinyint NOT NULL DEFAULT '1' COMMENT '线下支付总开关 0关闭 1开启',
+  `offline_wx_qrcode` varchar(500) DEFAULT NULL COMMENT '线下支付-微信收款码图片URL',
+  `offline_alipay_qrcode` varchar(500) DEFAULT NULL COMMENT '线下支付-支付宝收款码图片URL',
+  `offline_other_qrcode` varchar(500) DEFAULT NULL COMMENT '线下支付-其他收款码/聚合码图片URL',
+  `online_wx_pay_enabled` tinyint NOT NULL DEFAULT '1' COMMENT '线上微信支付开关 0关闭 1开启',
+  `online_alipay_pay_enabled` tinyint NOT NULL DEFAULT '1' COMMENT '线上支付宝支付开关 0关闭 1开启',
+  `wx_mch_id` varchar(64) DEFAULT NULL COMMENT '微信支付商户号(可选商户独立配置)',
+  `wx_app_id` varchar(64) DEFAULT NULL COMMENT '微信支付AppId(可选商户独立配置)',
+  `alipay_app_id` varchar(64) DEFAULT NULL COMMENT '支付宝应用AppId(可选商户独立配置)',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_shop_id` (`shop_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='店铺支付管理配置表';
+
+-- 初始化店铺支付配置数据
+INSERT INTO `shop_payment_config` (`id`, `shop_id`, `offline_pay_enabled`, `offline_wx_qrcode`, `offline_alipay_qrcode`, `offline_other_qrcode`, `online_wx_pay_enabled`, `online_alipay_pay_enabled`) VALUES
+('spc001', '1', 1, NULL, NULL, NULL, 1, 1),
+('spc002', '2', 1, NULL, NULL, NULL, 1, 1);
+
+-- ------------------------------------------------------------
+-- 支付流水表（线上支付/线下收款流水对账）
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `payment`;
+CREATE TABLE `payment` (
+  `id` varchar(128) NOT NULL COMMENT '主键',
+  `payment_no` varchar(32) NOT NULL COMMENT '本系统支付流水号(P开头, 唯一)',
+  `shop_id` varchar(128) DEFAULT NULL COMMENT '所属店铺ID（多店铺隔离）',
+  `order_id` varchar(128) NOT NULL COMMENT '关联订单ID',
+  `order_no` varchar(50) NOT NULL COMMENT '关联订单号(冗余, 方便查询)',
+  `user_id` varchar(128) NOT NULL COMMENT '用户ID',
+  `pay_amount` decimal(10,2) NOT NULL COMMENT '支付金额(单位元)',
+  `pay_type` tinyint NOT NULL COMMENT '支付方式 1微信线上 2支付宝线上 3线下微信 4线下支付宝 5线下其他 99Mock',
+  `pay_status` tinyint NOT NULL DEFAULT '0' COMMENT '支付状态 0待支付 1已支付成功 2支付失败 3已关闭 4已退款',
+  `transaction_id` varchar(64) DEFAULT NULL COMMENT '微信/支付宝第三方交易号',
+  `prepay_id` varchar(64) DEFAULT NULL COMMENT '微信预支付ID(JSAPI/APP场景)',
+  `qr_code_url` varchar(512) DEFAULT NULL COMMENT '二维码链接(Native/扫码场景)',
+  `mweb_url` varchar(512) DEFAULT NULL COMMENT 'H5支付跳转链接(MWEB场景)',
+  `request_param` text COMMENT '下单请求参数(JSON快照, 便于排查)',
+  `notify_data` text COMMENT '第三方回调原始报文(JSON)',
+  `fail_reason` varchar(255) DEFAULT NULL COMMENT '失败原因',
+  `client_ip` varchar(64) DEFAULT NULL COMMENT '下单客户端IP',
+  `pay_time` datetime DEFAULT NULL COMMENT '支付完成时间',
+  `expire_time` datetime DEFAULT NULL COMMENT '订单过期时间(通常下单后30分钟)',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_payment_no` (`payment_no`),
+  KEY `idx_shop_id` (`shop_id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_order_no` (`order_no`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_pay_status` (`pay_status`),
+  KEY `idx_transaction_id` (`transaction_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='支付流水表';
 
 SET FOREIGN_KEY_CHECKS = 1;

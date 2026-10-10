@@ -156,6 +156,12 @@
       "style": {
         "navigationBarTitleText": "选择店铺位置"
       }
+    },
+    {
+      "path": "pages/merchant/payment/payment",
+      "style": {
+        "navigationBarTitleText": "支付管理"
+      }
     }
   ],
   "globalStyle": {

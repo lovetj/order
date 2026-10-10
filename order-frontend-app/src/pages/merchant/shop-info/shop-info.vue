@@ -1,5 +1,14 @@
 <template>
   <view class="page">
+    <!-- 未保存修改浮动高亮提示条 -->
+    <view v-if="hasUnsaved" class="unsaved-alert-bar">
+      <view class="unsaved-alert-left">
+        <text class="alert-icon">⚠️</text>
+        <text class="alert-text">当前店铺信息已修改，离开前请记得保存！</text>
+      </view>
+      <view class="alert-btn" @click.stop="save">立即保存</view>
+    </view>
+
     <!-- 店铺 Logo -->
     <view class="card">
       <view class="card-title"><text class="required">*</text>店铺 Logo</view>
@@ -85,9 +94,20 @@
 
     <!-- 底部漂浮操作栏 -->
     <view class="action-bar">
-      <view v-if="hasUnsaved" class="unsaved-tip">有未保存的修改</view>
+      <view v-if="hasUnsaved" class="unsaved-hint-tag">
+        <text class="dot"></text>
+        <text>有未保存的更改，点击下方保存生效</text>
+      </view>
       <button class="cancel-btn" :disabled="saving" @click="cancel">取消</button>
-      <button class="save-btn" :class="{ 'save-btn-active': hasUnsaved }" :loading="saving" :disabled="saving || uploading" @click="save">保存</button>
+      <button
+        class="save-btn"
+        :class="{ 'is-modified': hasUnsaved, 'save-btn-active': hasUnsaved }"
+        :loading="saving"
+        :disabled="saving || uploading"
+        @click="save"
+      >
+        {{ saving ? '保存中...' : (hasUnsaved ? '保存店铺信息 (待保存)' : '保存店铺信息') }}
+      </button>
     </view>
   </view>
 </template>
@@ -105,6 +125,7 @@ export default {
       uploading: false,
       // 是否存在未保存的改动：用于离页提醒与「未保存」提示
       hasUnsaved: false,
+      forceBack: false,
       // 店铺地址「定位」按钮点击后的加载中状态
       locating: false,
       // 图片完整展示地址（用于 image 渲染）
@@ -151,6 +172,29 @@ export default {
       uni.disableAlertBeforeUnload()
       this._alertEnabled = false
     }
+  },
+  onBackPress(options) {
+    if (this.forceBack) {
+      return false
+    }
+    if (this.hasUnsaved) {
+      uni.showModal({
+        title: '未保存提醒',
+        content: '当前店铺信息已修改，尚未保存生效。是否放弃更改并返回？',
+        confirmText: '放弃离开',
+        cancelText: '继续保存',
+        confirmColor: '#999999',
+        cancelColor: '#2f80ed',
+        success: (res) => {
+          if (res.confirm) {
+            this.forceBack = true
+            uni.navigateBack()
+          }
+        }
+      })
+      return true
+    }
+    return false
   },
   methods: {
     /**
@@ -826,6 +870,92 @@ export default {
   line-height: 1.6;
 }
 
+/* ==================== 未保存修改提醒条 ==================== */
+.unsaved-alert-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #fff2e8 0%, #ffe7ba 100%);
+  border-bottom: 2rpx solid #ffd591;
+  padding: 16rpx 24rpx;
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  animation: fadeInDown 0.25s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.unsaved-alert-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.unsaved-alert-left .alert-icon {
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+
+.unsaved-alert-left .alert-text {
+  font-size: 24rpx;
+  color: #d4380d;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.alert-btn {
+  background: #ff4d4f;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 8rpx 18rpx;
+  border-radius: 24rpx;
+  flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(255, 77, 79, 0.35);
+}
+
+.unsaved-hint-tag {
+  flex: 0 0 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8rpx;
+  font-size: 22rpx;
+  color: #fa541c;
+}
+
+.unsaved-hint-tag .dot {
+  width: 12rpx;
+  height: 12rpx;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  animation: pulseDot 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
 /* ---------- 底部漂浮操作栏 ---------- */
 .action-bar {
   position: fixed;
@@ -876,12 +1006,14 @@ export default {
   background: #2f80ed;
   color: #fff;
   box-shadow: 0 6rpx 16rpx rgba(47, 128, 237, 0.3);
+  transition: all 0.25s ease;
 }
 
 /* 有未保存改动时高亮，吸引用户点击保存 */
-.save-btn-active {
-  background: #ff6b35;
-  box-shadow: 0 6rpx 16rpx rgba(255, 107, 53, 0.35);
+.save-btn-active,
+.save-btn.is-modified {
+  background: linear-gradient(135deg, #ff4d4f 0%, #f5222d 100%) !important;
+  box-shadow: 0 6rpx 20rpx rgba(245, 34, 45, 0.4) !important;
 }
 
 .cancel-btn::after,

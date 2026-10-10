@@ -76,6 +76,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Autowired
     private com.order.mapper.UserMapper userMapper;
 
+    @Autowired
+    private com.order.service.ShopPaymentConfigService shopPaymentConfigService;
+
     // ==================== 顾客下单 ====================
 
     @Override
@@ -180,7 +183,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setProductTotal(productTotal);
         order.setDiscountAmount(BigDecimal.ZERO);
         order.setPayAmount(productTotal);
-        order.setPayType(99); // 未支付
+
+        // 支付模式与方式处理
+        int payMode = dto.getPayMode() != null ? dto.getPayMode() : 2; // 默认线下支付
+        int payType = dto.getPayType() != null ? dto.getPayType() : (payMode == 2 ? 3 : 1);
+        order.setPayMode(payMode);
+        order.setPayType(payType);
+        order.setPayStatus(0); // 0待支付
+
+        // 若为线下支付，快照匹配当前店铺对应收款二维码
+        if (payMode == 2) {
+            com.order.entity.ShopPaymentConfig payConfig = shopPaymentConfigService.getByShopId(shopId);
+            if (payConfig != null) {
+                if (payType == 3 && StringUtils.hasText(payConfig.getOfflineWxQrcode())) {
+                    order.setPayQrcode(payConfig.getOfflineWxQrcode());
+                } else if (payType == 4 && StringUtils.hasText(payConfig.getOfflineAlipayQrcode())) {
+                    order.setPayQrcode(payConfig.getOfflineAlipayQrcode());
+                } else if (StringUtils.hasText(payConfig.getOfflineOtherQrcode())) {
+                    order.setPayQrcode(payConfig.getOfflineOtherQrcode());
+                } else {
+                    order.setPayQrcode(payConfig.getOfflineWxQrcode());
+                }
+            }
+        }
+
         order.setStatus(STATUS_PENDING);
         order.setRemark(dto.getRemark());
         save(order);
@@ -502,6 +528,38 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         vo.setPeopleCount(order.getPeopleCount());
         vo.setRemark(order.getRemark());
         vo.setAction(toAction(order.getStatus()));
+
+        // 支付相关字段映射
+        vo.setPayType(order.getPayType());
+        if (order.getPayMode() != null && order.getPayMode() == 2) {
+            vo.setPayTypeText("线下支付");
+        } else {
+            vo.setPayTypeText(toPayTypeText(order.getPayType()));
+        }
+        vo.setPayMode(order.getPayMode());
+        vo.setPayStatus(order.getPayStatus() != null ? order.getPayStatus() : (order.getStatus() == STATUS_DONE ? 2 : 0));
+        vo.setPayStatusText(toPayStatusText(vo.getPayStatus()));
+        vo.setPayQrcode(FileUrlUtil.toAbsolute(order.getPayQrcode(), fileConfigProperties.getBaseServer()));
+        if (order.getPayMode() != null && order.getPayMode() == 2 && StringUtils.hasText(order.getShopId())) {
+            try {
+                com.order.entity.ShopPaymentConfig paymentCfg = shopPaymentConfigService.getByShopId(order.getShopId());
+                if (paymentCfg != null) {
+                    vo.setOfflineWxQrcode(FileUrlUtil.toAbsolute(paymentCfg.getOfflineWxQrcode(), fileConfigProperties.getBaseServer()));
+                    vo.setOfflineAlipayQrcode(FileUrlUtil.toAbsolute(paymentCfg.getOfflineAlipayQrcode(), fileConfigProperties.getBaseServer()));
+                    vo.setOfflineOtherQrcode(FileUrlUtil.toAbsolute(paymentCfg.getOfflineOtherQrcode(), fileConfigProperties.getBaseServer()));
+                    if (!StringUtils.hasText(vo.getPayQrcode())) {
+                        String defaultQr = StringUtils.hasText(vo.getOfflineWxQrcode()) ? vo.getOfflineWxQrcode()
+                                : (StringUtils.hasText(vo.getOfflineAlipayQrcode()) ? vo.getOfflineAlipayQrcode() : vo.getOfflineOtherQrcode());
+                        vo.setPayQrcode(defaultQr);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        vo.setPaymentNo(order.getPaymentNo());
+        vo.setPayTime(order.getPayTime() == null ? null : order.getPayTime().format(DATE_TIME));
+        vo.setOfflinePayTime(order.getOfflinePayTime() == null ? null : order.getOfflinePayTime().format(DATE_TIME));
+
         if (StringUtils.hasText(phone)) {
             vo.setPhone(phone);
             vo.setUserPhone(phone);
@@ -546,20 +604,49 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     private String toStatusText(Integer status) {
-        if (status == null) {
-            return "";
-        }
+        if (status == null) return "待接单";
         switch (status) {
-            case STATUS_PENDING:
-                return "待接单";
             case STATUS_COOKING:
                 return "制作中";
             case STATUS_DONE:
                 return "已完成";
             case STATUS_CANCELED:
                 return "已取消";
+            case STATUS_PENDING:
             default:
-                return "未知";
+                return "待接单";
+        }
+    }
+
+    private String toPayTypeText(Integer payType) {
+        if (payType == null) return "未支付";
+        switch (payType) {
+            case 1:
+                return "微信支付";
+            case 2:
+                return "支付宝支付";
+            case 3:
+            case 4:
+            case 5:
+                return "线下支付";
+            case 99:
+            default:
+                return "未支付";
+        }
+    }
+
+    private String toPayStatusText(Integer payStatus) {
+        if (payStatus == null) return "待支付";
+        switch (payStatus) {
+            case 1:
+                return "支付中";
+            case 2:
+                return "已支付";
+            case 3:
+                return "支付失败";
+            case 0:
+            default:
+                return "待支付";
         }
     }
 

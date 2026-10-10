@@ -127,7 +127,7 @@
 
               <!-- 加减操作/选规格按钮 -->
               <view class="ops">
-                <view v-if="item.count > 0" class="step-btn minus" @click.stop="minusItem(item.key)">
+                <view v-if="item.count > 0" class="step-btn minus" @click.stop="minusGoodsItem(item)">
                   <text class="step-icon">−</text>
                 </view>
                 <text v-if="item.count > 0" class="step-num">{{item.count}}</text>
@@ -206,7 +206,7 @@
               <text class="step-icon">−</text>
             </view>
             <text class="step-num">{{item.count}}</text>
-            <view class="step-btn plus" @click.stop="addItem(item.id)">
+            <view class="step-btn plus" @click.stop="plusCartItem(item.key)">
               <text class="step-icon">＋</text>
             </view>
           </view>
@@ -242,6 +242,115 @@
         <text class="checkout-btn-text">去结算</text>
       </view>
     </view>
+
+    <!-- 支付方式选择与结算弹窗 -->
+    <view v-if="showPayModal" class="pay-modal-mask" @click="closePayModal"></view>
+    <view v-if="showPayModal" class="pay-modal">
+      <view class="pay-modal-head">
+        <text class="pay-modal-title">确认下单与支付</text>
+        <text class="pay-modal-close" @click="closePayModal">✕</text>
+      </view>
+
+      <view class="pay-modal-summary">
+        <view class="summary-line">
+          <text class="label">就餐方式</text>
+          <text class="val highlight">{{diningType === 2 ? '外带自提' : (tableNo ? `${tableNo} 号桌` : '堂食点餐')}}</text>
+        </view>
+        <view class="summary-line">
+          <text class="label">商品件数</text>
+          <text class="val">{{cartCount}} 件</text>
+        </view>
+        <view class="summary-line" v-if="currentBestCoupon">
+          <text class="label">已享优惠</text>
+          <text class="val coupon-label">{{currentBestCoupon.label}}</text>
+        </view>
+        <view class="summary-line total-line">
+          <text class="label">应付金额</text>
+          <text class="total-price">¥{{cartAmount}}</text>
+        </view>
+      </view>
+
+      <view class="pay-options-title">选择支付方式</view>
+      <view class="pay-options-list">
+        <!-- 线下支付选项 -->
+        <view
+          class="pay-option-item"
+          :class="{
+            disabled: !shopPaymentConfig.offlinePayEnabled,
+            selected: selectedPayMode === 2 && shopPaymentConfig.offlinePayEnabled
+          }"
+          @click="selectPayment(2, 3)"
+        >
+          <view class="pay-opt-left">
+            <text class="pay-opt-icon">🏪</text>
+            <view class="pay-opt-info">
+              <view class="pay-opt-name-wrap">
+                <text class="pay-opt-name">线下支付</text>
+                <text v-if="!shopPaymentConfig.offlinePayEnabled" class="disabled-tag">暂未开通</text>
+              </view>
+              <text class="pay-opt-desc">扫描店家二维码付款，店员核验后制作</text>
+            </view>
+          </view>
+          <view class="pay-radio" :class="{ checked: selectedPayMode === 2 && shopPaymentConfig.offlinePayEnabled }">
+            <view class="radio-inner" v-if="selectedPayMode === 2 && shopPaymentConfig.offlinePayEnabled"></view>
+          </view>
+        </view>
+
+        <!-- 线上微信支付 -->
+        <view
+          class="pay-option-item"
+          :class="{
+            disabled: !shopPaymentConfig.onlineWxPayEnabled,
+            selected: selectedPayMode === 1 && selectedPayType === 1 && shopPaymentConfig.onlineWxPayEnabled
+          }"
+          @click="selectPayment(1, 1)"
+        >
+          <view class="pay-opt-left">
+            <text class="pay-opt-icon">💬</text>
+            <view class="pay-opt-info">
+              <view class="pay-opt-name-wrap">
+                <text class="pay-opt-name">微信支付</text>
+                <text v-if="!shopPaymentConfig.onlineWxPayEnabled" class="disabled-tag">暂未开通</text>
+              </view>
+              <text class="pay-opt-desc">微信安全线上极速支付</text>
+            </view>
+          </view>
+          <view class="pay-radio" :class="{ checked: selectedPayMode === 1 && selectedPayType === 1 && shopPaymentConfig.onlineWxPayEnabled }">
+            <view class="radio-inner" v-if="selectedPayMode === 1 && selectedPayType === 1 && shopPaymentConfig.onlineWxPayEnabled"></view>
+          </view>
+        </view>
+
+        <!-- 线上支付宝支付 -->
+        <view
+          class="pay-option-item"
+          :class="{
+            disabled: !shopPaymentConfig.onlineAlipayPayEnabled,
+            selected: selectedPayMode === 1 && selectedPayType === 2 && shopPaymentConfig.onlineAlipayPayEnabled
+          }"
+          @click="selectPayment(1, 2)"
+        >
+          <view class="pay-opt-left">
+            <text class="pay-opt-icon">🪙</text>
+            <view class="pay-opt-info">
+              <view class="pay-opt-name-wrap">
+                <text class="pay-opt-name">支付宝支付</text>
+                <text v-if="!shopPaymentConfig.onlineAlipayPayEnabled" class="disabled-tag">暂未开通</text>
+              </view>
+              <text class="pay-opt-desc">支付宝便捷支付</text>
+            </view>
+          </view>
+          <view class="pay-radio" :class="{ checked: selectedPayMode === 1 && selectedPayType === 2 && shopPaymentConfig.onlineAlipayPayEnabled }">
+            <view class="radio-inner" v-if="selectedPayMode === 1 && selectedPayType === 2 && shopPaymentConfig.onlineAlipayPayEnabled"></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="pay-submit-wrap">
+        <button class="pay-confirm-btn" :loading="submitting" :disabled="submitting" @click="confirmCreateOrder">
+          {{selectedPayMode === 2 ? '立即下单（线下付款）' : '立即支付 ¥' + cartAmount}}
+        </button>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -272,7 +381,18 @@ export default {
       cartCount: 0,
       cartAmount: 0,
       showCart: false,
-      needScan: false
+      needScan: false,
+      // 支付弹窗与店铺支付方式配置
+      showPayModal: false,
+      submitting: false,
+      selectedPayType: 3, // 1微信线上 2支付宝线上 3线下微信 4线下支付宝 5线下其他
+      selectedPayMode: 2, // 1线上 2线下
+      shopPaymentConfig: {
+        offlinePayEnabled: true,
+        onlineWxPayEnabled: false,
+        onlineAlipayPayEnabled: false
+      },
+      currentBestCoupon: null
     }
   },
 
@@ -295,11 +415,14 @@ export default {
   },
 
   onShow() {
-    if (app.globalData.role !== 'customer') {
+    // 扫码进入或具备店铺/桌位上下文：明确是顾客行为，自动确认为顾客身份，坚决不跳 role 选择页
+    if (app.globalData.shopId || app.globalData.tableId || uni.getStorageSync('shopId') || uni.getStorageSync('tableId')) {
+      app.globalData.setRole('customer')
+    } else if (app.globalData.role !== 'customer') {
       uni.reLaunch({ url: '/pages/role/role' })
       return
     }
-    // 未登录：onLoad 已通过 ensureCustomerContext 跳转登录，这里仅中止后续请求
+    // 未登录：onLoad 已通过 ensureCustomerContext 跳转登录，这里若仍未登录则直接中止后续请求
     if (!app.globalData.isLogin()) return
     this.needScan = !hasCustomerContext(app)
     // 无店铺/桌位上下文时不发请求，仅提示扫码
@@ -531,6 +654,29 @@ export default {
       this.updateCart(cart)
     },
 
+    minusGoodsItem(item) {
+      if (!item || !item.id) return
+      const dishId = item.id
+      const cart = { ...this.cart }
+      const matchedKeys = Object.keys(cart).filter((k) => cart[k] && cart[k].id === dishId)
+      if (matchedKeys.length === 0) return
+
+      // 若有多个规格，优先减少最后添加的条目
+      const key = matchedKeys[matchedKeys.length - 1]
+      cart[key].count -= 1
+      if (cart[key].count <= 0) {
+        delete cart[key]
+      }
+      this.updateCart(cart)
+    },
+
+    plusCartItem(key) {
+      const cart = { ...this.cart }
+      if (!cart[key]) return
+      cart[key].count += 1
+      this.updateCart(cart)
+    },
+
     updateCart(cart) {
       let cartCount = 0
       let cartAmount = 0
@@ -554,6 +700,9 @@ export default {
       this.cartCount = cartCount
       this.cartAmount = Number(cartAmount.toFixed(2))
       this.goodsList = goodsList
+      if (cartCount === 0) {
+        this.showCart = false
+      }
     },
 
     toggleCart() {
@@ -584,85 +733,161 @@ export default {
       if (diningType === 2 && !tableNo) {
         tableNo = 'TAKEOUT'
       }
-      const { cart, cartAmount, cartCount } = this
-      const diningLabel = diningType === 2 ? '【外带自提】' : `【堂食·${tableNo}桌】`
-      // 自动匹配最优优惠券并展示
-      api.getBestCoupon(cartAmount).then((coupon) => {
-        let content = `${diningLabel}\n共 ${cartCount} 件，合计 ¥${cartAmount}`
-        let userCouponId = ''
-        if (coupon) {
-          userCouponId = coupon.id
-          content += `\n已使用：${coupon.label}`
+
+      const shopId = (app.globalData && app.globalData.shopId) || uni.getStorageSync('shopId') || '1'
+      uni.showLoading({ title: '加载支付信息...' })
+      // 1. 查询店铺支付开关配置
+      api.getShopPaymentConfig(shopId).then((payConf) => {
+        if (payConf) {
+          this.shopPaymentConfig = payConf
+          // 智能预选可用支付方式
+          if (payConf.offlinePayEnabled) {
+            this.selectedPayMode = 2
+            this.selectedPayType = 3
+          } else if (payConf.onlineWxPayEnabled) {
+            this.selectedPayMode = 1
+            this.selectedPayType = 1
+          } else if (payConf.onlineAlipayPayEnabled) {
+            this.selectedPayMode = 1
+            this.selectedPayType = 2
+          }
         }
-        uni.showModal({
-          title: '确认下单',
-          content,
-          confirmText: '确认下单',
-          confirmColor: '#2468f2',
-          success: (res) => {
-            if (!res.confirm) return
-            // 组装后端需要的 items: [{ dishId, quantity, specIds, specText }]
-            const items = Object.keys(cart).map((key) => {
-              const entry = cart[key]
-              return {
-                dishId: entry.id,
-                quantity: entry.count,
-                specIds: entry.specIds || [],
-                specText: entry.specText || ''
-              }
-            })
-            const payload = {
-              tableNo,
-              diningType,
-              items,
-              peopleCount: null
-            }
-            if (userCouponId) {
-              payload.userCouponId = userCouponId
-            }
-            api.createOrder(payload)
-              .then(() => {
-                this.showCart = false
-                this.updateCart({})
-                uni.showToast({ title: '下单成功', icon: 'success' })
-                setTimeout(() => uni.reLaunch({ url: '/pages/order/order' }), 800)
-              })
-              .catch(() => {})
-          }
-        })
+        // 2. 匹配最优优惠券
+        return api.getBestCoupon(this.cartAmount)
+      }).then((coupon) => {
+        uni.hideLoading()
+        this.currentBestCoupon = coupon || null
+        this.showCart = false
+        this.showPayModal = true
       }).catch(() => {
-        // 优惠券查询失败不影响下单
-        uni.showModal({
-          title: '确认下单',
-          content: `${diningLabel}\n共 ${cartCount} 件，合计 ¥${cartAmount}`,
-          confirmText: '确认下单',
-          confirmColor: '#2468f2',
-          success: (res) => {
-            if (!res.confirm) return
-            const items = Object.keys(cart).map((key) => {
-              const entry = cart[key]
-              return {
-                dishId: entry.id,
-                quantity: entry.count,
-                specIds: entry.specIds || [],
-                specText: entry.specText || ''
+        uni.hideLoading()
+        this.currentBestCoupon = null
+        this.showCart = false
+        this.showPayModal = true
+      })
+    },
+
+    closePayModal() {
+      this.showPayModal = false
+    },
+
+    selectPayment(mode, type) {
+      if (mode === 2 && !this.shopPaymentConfig.offlinePayEnabled) {
+        uni.showToast({ title: '商家暂未开通线下支付', icon: 'none' })
+        return
+      }
+      if (mode === 1 && type === 1 && !this.shopPaymentConfig.onlineWxPayEnabled) {
+        uni.showToast({ title: '商家暂未开通微信支付', icon: 'none' })
+        return
+      }
+      if (mode === 1 && type === 2 && !this.shopPaymentConfig.onlineAlipayPayEnabled) {
+        uni.showToast({ title: '商家暂未开通支付宝支付', icon: 'none' })
+        return
+      }
+      this.selectedPayMode = mode
+      this.selectedPayType = type
+    },
+
+    confirmCreateOrder() {
+      if (this.submitting) return
+      const diningType = this.diningType || (app.globalData && app.globalData.diningType) || 1
+      let tableNo = app.globalData.tableNo || this.tableNo || ''
+      if (diningType === 2 && !tableNo) {
+        tableNo = 'TAKEOUT'
+      }
+      const { cart } = this
+      const items = Object.keys(cart).map((key) => {
+        const entry = cart[key]
+        return {
+          dishId: entry.id,
+          quantity: entry.count,
+          specIds: entry.specIds || [],
+          specText: entry.specText || ''
+        }
+      })
+
+      const payload = {
+        tableNo,
+        diningType,
+        items,
+        payMode: this.selectedPayMode,
+        payType: this.selectedPayType,
+        peopleCount: null
+      }
+      if (this.currentBestCoupon && this.currentBestCoupon.id) {
+        payload.userCouponId = this.currentBestCoupon.id
+      }
+
+      this.submitting = true
+      api.createOrder(payload).then((orderRes) => {
+        this.submitting = false
+        this.showPayModal = false
+        this.updateCart({})
+
+        // 线下支付分支：直接下单成功并跳订单页展示收款码
+        if (this.selectedPayMode === 2) {
+          uni.showToast({ title: '下单成功，请扫码付款', icon: 'success' })
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/order/order' })
+          }, 800)
+          return
+        }
+
+        // 线上支付分支：调用 /api/payment/create 调起支付
+        this.handleOnlinePay(orderRes)
+      }).catch((err) => {
+        this.submitting = false
+        uni.showToast({ title: (err && err.message) || '下单失败', icon: 'none' })
+      })
+    },
+
+    handleOnlinePay(orderRes) {
+      const orderId = (orderRes && (orderRes.orderNo || orderRes.id)) || ''
+      uni.showLoading({ title: '正在调起支付...' })
+      api.createPayment({
+        orderId,
+        payType: this.selectedPayType,
+        platform: 'h5'
+      }).then((payResp) => {
+        uni.hideLoading()
+        const isMock = payResp && payResp.payParams && payResp.payParams.mock
+        if (isMock) {
+          uni.showModal({
+            title: '模拟线上支付',
+            content: `本次为开发测试模式，支付金额：¥${payResp.payAmount}。点击确定完成模拟支付。`,
+            confirmText: '模拟付款',
+            cancelText: '稍后付款',
+            success: (mRes) => {
+              if (mRes.confirm) {
+                uni.showLoading({ title: '正在支付...' })
+                api.mockPaySuccess(payResp.paymentNo).then(() => {
+                  uni.hideLoading()
+                  uni.showToast({ title: '支付成功！', icon: 'success' })
+                  setTimeout(() => {
+                    uni.reLaunch({ url: '/pages/order/order' })
+                  }, 800)
+                }).catch(() => {
+                  uni.hideLoading()
+                  uni.reLaunch({ url: '/pages/order/order' })
+                })
+              } else {
+                uni.reLaunch({ url: '/pages/order/order' })
               }
-            })
-            api.createOrder({
-              tableNo,
-              diningType,
-              items,
-              peopleCount: null
-            })
-              .then(() => {
-                this.showCart = false
-                this.updateCart({})
-                uni.showToast({ title: '下单成功', icon: 'success' })
-                setTimeout(() => uni.reLaunch({ url: '/pages/order/order' }), 800)
-              })
-              .catch(() => {})
-          }
-        })
+            }
+          })
+        } else {
+          // 真实第三方支付
+          uni.showToast({ title: '已发起支付', icon: 'success' })
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/order/order' })
+          }, 800)
+        }
+      }).catch((err) => {
+        uni.hideLoading()
+        uni.showToast({ title: (err && err.message) || '支付调起失败', icon: 'none' })
+        setTimeout(() => {
+          uni.reLaunch({ url: '/pages/order/order' })
+        }, 1000)
       })
     }
   }
@@ -1360,6 +1585,37 @@ export default {
   margin-left: 2rpx;
 }
 
+.stepper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.stepper .step-btn {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.stepper .step-num {
+  min-width: 44rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 10rpx;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
 .stepper.small .step-btn {
   width: 46rpx;
   height: 46rpx;
@@ -1367,6 +1623,13 @@ export default {
 
 .stepper.small .step-icon {
   font-size: 26rpx;
+  line-height: 1;
+}
+
+.stepper.small .step-num {
+  min-width: 40rpx;
+  font-size: 26rpx;
+  margin: 0 8rpx;
 }
 
 /* ==================== 悬浮结算栏 ==================== */
@@ -1501,5 +1764,214 @@ export default {
   font-size: 28rpx;
   font-weight: 600;
   letter-spacing: 1rpx;
+}
+
+/* ==================== 支付弹窗样式 ==================== */
+.pay-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 10000;
+}
+
+.pay-modal {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #ffffff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  z-index: 10001;
+  box-shadow: 0 -12rpx 48rpx rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.pay-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.pay-modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.pay-modal-close {
+  font-size: 36rpx;
+  color: #94a3b8;
+  padding: 10rpx;
+}
+
+.pay-modal-summary {
+  background: #f8fafc;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin: 24rpx 0;
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.summary-line .label {
+  font-size: 26rpx;
+  color: #64748b;
+}
+
+.summary-line .val {
+  font-size: 26rpx;
+  color: #1e293b;
+}
+
+.summary-line .highlight {
+  color: #2468f2;
+  font-weight: 600;
+}
+
+.summary-line .coupon-label {
+  color: #ff4d4f;
+  font-weight: 500;
+}
+
+.summary-line.total-line {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #e2e8f0;
+  margin-bottom: 0;
+}
+
+.total-price {
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #ff4d4f;
+}
+
+.pay-options-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 16rpx;
+}
+
+.pay-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.pay-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: #ffffff;
+  border: 2rpx solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.pay-option-item.selected {
+  border-color: #2468f2;
+  background: #f0f7ff;
+}
+
+.pay-option-item.disabled {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  opacity: 0.55;
+}
+
+.pay-opt-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.pay-opt-icon {
+  font-size: 44rpx;
+  margin-right: 20rpx;
+}
+
+.pay-opt-info {
+  flex: 1;
+}
+
+.pay-opt-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.pay-opt-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.disabled-tag {
+  font-size: 20rpx;
+  background: #f1f5f9;
+  color: #94a3b8;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+}
+
+.pay-opt-desc {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.pay-radio {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pay-radio.checked {
+  border-color: #2468f2;
+}
+
+.radio-inner {
+  width: 22rpx;
+  height: 22rpx;
+  border-radius: 50%;
+  background: #2468f2;
+}
+
+.pay-submit-wrap {
+  margin-top: 32rpx;
+}
+
+.pay-confirm-btn {
+  background: linear-gradient(135deg, #2468f2, #1a56d6);
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 700;
+  border-radius: 44rpx;
+  height: 88rpx;
+  line-height: 88rpx;
 }
 </style>

@@ -72,6 +72,12 @@ export function ensureCustomerContext(options, redirectIfNotLogin = true) {
   const app = getApp()
   const query = options || {}
   let hasNew = false
+
+  // 只要具备店铺或桌位上下文（扫码进入），身份必为顾客
+  if (query.shopId || query.tableId || query.tableNo) {
+    app.globalData.setRole('customer')
+  }
+
   if (query.shopId) {
     const before = app.globalData.shopId || ''
     const isShopChange = before && String(query.shopId) !== before
@@ -98,8 +104,7 @@ export function ensureCustomerContext(options, redirectIfNotLogin = true) {
 
   const needResolveTableNo = !!(query.tableId && !app.globalData.tableNo)
   const willRedirectToLogin = redirectIfNotLogin && !app.globalData.isLogin() &&
-      app.globalData.role !== 'merchant' &&
-      (app.globalData.shopId || app.globalData.tableId)
+      (app.globalData.shopId || app.globalData.tableId || query.shopId || query.tableId)
 
   // 未登录跳登录页：携带当前上下文（shopId/tableId/tableNo），供登录成功后回跳
   const redirectToLogin = () => {

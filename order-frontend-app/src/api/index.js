@@ -135,6 +135,15 @@ export default {
   updatePointsGoodsStatus: (id, status) => http.put(`/api/points/admin/${id}/status?status=${status}`),
   deletePointsGoods: (id) => http.del(`/api/points/admin/${id}`),
 
+  // ==================== 支付管理 ====================
+  getMerchantPaymentConfig: () => http.get('/api/payment/merchant/config'),
+  updateMerchantPaymentConfig: (data) => http.put('/api/payment/merchant/config', data),
+  getShopPaymentConfig: (shopId) => http.get('/api/payment/config', shopId ? { shopId } : {}),
+  createPayment: (data) => http.post('/api/payment/create', data),
+  mockPaySuccess: (paymentNo) => http.post('/api/payment/mock-success', { paymentNo }),
+  getPaymentStatus: (paymentNo) => http.get('/api/payment/status', { paymentNo }),
+  confirmOfflinePay: (orderId) => http.put(`/api/payment/merchant/confirm-offline/${orderId}`),
+
   // ==================== 报表导出（店家端） ====================
   exportReportUrl: (startDate, endDate) =>
     `${baseUrl}/api/export/report?startDate=${startDate || ''}&endDate=${endDate || ''}`,

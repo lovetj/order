@@ -15,6 +15,57 @@
       </view>
     </view>
 
+    <!-- 线下付款提示/收款二维码卡片（若属于线下支付） -->
+    <view v-if="order.id && order.payMode === 2" class="offline-pay-card" :class="{ 'customer-mode': !isMerchant }">
+      <view class="offline-pay-head">
+        <view class="offline-title-row">
+          <text class="offline-icon">🏪</text>
+          <text class="offline-title">{{ isMerchant ? '线下收款二维码' : '线下支付' }}</text>
+          <text class="offline-status-badge" :class="order.payStatus === 2 ? 'paid' : 'unpaid'">
+            {{ order.payStatus === 2 ? '店家已确认收款' : (isMerchant ? '等待店员确认收款' : '等待店家核验收款') }}
+          </text>
+        </view>
+        <text class="offline-subtitle">
+          {{ order.payStatus === 2 ? '本次款项已核验入账，祝您用餐愉快！' : (isMerchant ? '请出示下方店铺收款码，确认款项后点击核验' : '已选择线下支付，请扫描店家二维码付款，店员核验后将确认制作') }}
+        </text>
+      </view>
+
+      <!-- 仅店家端支持出示/切换二维码展示（顾客端不展示二维码，仅保留提示信息） -->
+      <template v-if="isMerchant">
+        <view class="offline-type-tabs">
+          <view
+            class="offline-type-tab"
+            :class="{ active: cardQrType === 'wx' }"
+            @click="cardQrType = 'wx'"
+          >
+            微信收款码
+          </view>
+          <view
+            class="offline-type-tab"
+            :class="{ active: cardQrType === 'alipay' }"
+            @click="cardQrType = 'alipay'"
+          >
+            支付宝收款码
+          </view>
+          <view
+            class="offline-type-tab"
+            :class="{ active: cardQrType === 'other' }"
+            @click="cardQrType = 'other'"
+          >
+            其他收款码
+          </view>
+        </view>
+
+        <view class="qrcode-display-area" v-if="currentCardQrcodeUrl">
+          <image :src="currentCardQrcodeUrl" mode="aspectFit" class="pay-qrcode-image" @click="openFullPreview(currentCardQrcodeUrl)" />
+          <text class="qrcode-tip">点击二维码可全屏放大展示</text>
+        </view>
+        <view class="qrcode-empty-box" v-else>
+          <text class="empty-qr-text">当前类型未上传收款码，可切换其他方式或向店员付款</text>
+        </view>
+      </template>
+    </view>
+
     <!-- 加载中占位 -->
     <view v-if="loading && !order.id" class="loading-state">
       <view class="mini-spinner" :class="isMerchant ? 'merchant-spinner' : 'customer-spinner'"></view>
@@ -135,6 +186,21 @@
             <text class="info-val">{{ order.createTime }}</text>
           </view>
 
+          <view class="info-row" v-if="order.payTypeText">
+            <text class="info-label">支付方式</text>
+            <text class="info-val">{{ order.payTypeText }}</text>
+          </view>
+
+          <view class="info-row" v-if="order.payStatusText">
+            <text class="info-label">支付状态</text>
+            <text class="info-val" :class="order.payStatus === 2 ? 'pay-paid' : 'pay-unpaid'">{{ order.payStatusText }}</text>
+          </view>
+
+          <view class="info-row" v-if="order.offlinePayTime">
+            <text class="info-label">线下收款时间</text>
+            <text class="info-val">{{ order.offlinePayTime }}</text>
+          </view>
+
           <!-- 备注提醒 -->
           <view class="remark-row" v-if="order.remark">
             <view class="remark-head">
@@ -200,6 +266,14 @@
         >
           拒单
         </view>
+        <!-- 线下支付未确认收款时，店家可点击“确认收款” -->
+        <view
+          v-if="order.payMode === 2 && order.payStatus !== 2 && order.status !== 'canceled'"
+          class="action-btn offline-confirm-btn"
+          @click="openMerchantOfflineModal"
+        >
+          确认已收款
+        </view>
         <view
           v-if="merchantNextAction"
           class="action-btn primary-btn merchant-primary"
@@ -208,6 +282,87 @@
           {{ merchantNextAction.text }}
         </view>
       </template>
+    </view>
+
+    <!-- 店家端出示收款码 & 核验收款弹窗 -->
+    <view v-if="showMerchantOfflineModal" class="merchant-qr-mask" @click="closeMerchantOfflineModal">
+      <view class="merchant-qr-card" @click.stop="noop">
+        <view class="merchant-qr-head">
+          <text class="merchant-qr-title">出示收款码 & 核验收款</text>
+          <text class="merchant-qr-close" @click="closeMerchantOfflineModal">✕</text>
+        </view>
+
+        <view class="merchant-qr-order-info">
+          <view class="merchant-qr-row">
+            <text class="row-label">订单编号：</text>
+            <text class="row-val">{{ order.orderNo || order.id }}</text>
+          </view>
+          <view class="merchant-qr-row">
+            <text class="row-label">应收金额：</text>
+            <text class="row-val price">¥{{ order.amount }}</text>
+          </view>
+        </view>
+
+        <!-- 收款方式类型选择切换 -->
+        <view class="merchant-qr-tabs">
+          <view
+            class="merchant-qr-tab"
+            :class="{ active: activeMerchantQrType === 'wx' }"
+            @click="activeMerchantQrType = 'wx'"
+          >
+            微信收款码
+          </view>
+          <view
+            class="merchant-qr-tab"
+            :class="{ active: activeMerchantQrType === 'alipay' }"
+            @click="activeMerchantQrType = 'alipay'"
+          >
+            支付宝收款码
+          </view>
+          <view
+            class="merchant-qr-tab"
+            :class="{ active: activeMerchantQrType === 'other' }"
+            @click="activeMerchantQrType = 'other'"
+          >
+            其他收款码
+          </view>
+        </view>
+
+        <!-- 收款码展示区域 -->
+        <view class="merchant-qr-img-wrap">
+          <image
+            v-if="currentMerchantQrcodeUrl"
+            :src="currentMerchantQrcodeUrl"
+            mode="aspectFit"
+            class="merchant-qr-img"
+            @click="openFullPreview(currentMerchantQrcodeUrl)"
+          />
+          <view v-else class="merchant-qr-empty">
+            <text class="empty-icon">📷</text>
+            <text class="empty-text">未上传该类型的收款码</text>
+            <text class="empty-tip">可在“我的 -> 支付管理”中上传维护</text>
+          </view>
+          <text v-if="currentMerchantQrcodeUrl" class="merchant-qr-hint">点击二维码可全屏放大展示给顾客</text>
+        </view>
+
+        <!-- 底部操作按钮 -->
+        <view class="merchant-qr-actions">
+          <button class="qr-btn cancel" @click="closeMerchantOfflineModal">取消</button>
+          <button class="qr-btn confirm" :loading="confirmingOffline" :disabled="confirmingOffline" @click="confirmOfflinePaySubmit">
+            确认已收到款项
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 全屏收款码大图浮层（层级高于一切弹窗，避免被确认弹窗遮盖） -->
+    <view v-if="fullPreviewUrl" class="full-screen-qr-mask" @click="closeFullPreview">
+      <view class="full-screen-qr-content" @click.stop="noop">
+        <image :src="fullPreviewUrl" mode="aspectFit" class="full-screen-qr-img" />
+        <view class="full-screen-qr-bar">
+          <text class="full-screen-qr-tip">轻触任意空白区域关闭全屏</text>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -239,14 +394,53 @@ export default {
         phone: '',
         userPhone: '',
         cancelReason: '',
+        payType: null,
+        payTypeText: '',
+        payMode: null,
+        payStatus: null,
+        payStatusText: '',
+        payQrcode: '',
+        offlineWxQrcode: '',
+        offlineAlipayQrcode: '',
+        offlineOtherQrcode: '',
+        offlinePayTime: '',
         action: null,
         items: []
       },
-      itemErrors: {}
+      itemErrors: {},
+      // 详情页顶部线下收款卡片切换状态
+      cardQrType: 'wx', // 'wx' | 'alipay' | 'other'
+      // 全屏二维码大图浮层（层级高于一切弹窗，避免被遮挡）
+      fullPreviewUrl: '',
+      // 店家端线下收款弹窗
+      showMerchantOfflineModal: false,
+      activeMerchantQrType: 'wx', // 'wx' | 'alipay' | 'other'
+      confirmingOffline: false,
+      merchantPaymentConfig: {
+        offlineWxQrcode: '',
+        offlineAlipayQrcode: '',
+        offlineOtherQrcode: ''
+      }
     }
   },
 
   computed: {
+    // 详情卡片当前展示的二维码
+    currentCardQrcodeUrl() {
+      const wxQr = this.merchantPaymentConfig.offlineWxQrcode || this.order.offlineWxQrcode || ''
+      const alipayQr = this.merchantPaymentConfig.offlineAlipayQrcode || this.order.offlineAlipayQrcode || ''
+      const otherQr = this.merchantPaymentConfig.offlineOtherQrcode || this.order.offlineOtherQrcode || ''
+      if (this.cardQrType === 'wx') return wxQr || (this.order.payType === 3 ? this.order.payQrcode : '')
+      if (this.cardQrType === 'alipay') return alipayQr || (this.order.payType === 4 ? this.order.payQrcode : '')
+      if (this.cardQrType === 'other') return otherQr || (this.order.payType === 5 ? this.order.payQrcode : '')
+      return this.order.payQrcode || ''
+    },
+    currentMerchantQrcodeUrl() {
+      if (this.activeMerchantQrType === 'wx') return this.merchantPaymentConfig.offlineWxQrcode || ''
+      if (this.activeMerchantQrType === 'alipay') return this.merchantPaymentConfig.offlineAlipayQrcode || ''
+      if (this.activeMerchantQrType === 'other') return this.merchantPaymentConfig.offlineOtherQrcode || ''
+      return ''
+    },
     // 判断当前页面是否处于店家端视图
     isMerchant() {
       if (this.roleParam === 'merchant') return true
@@ -368,6 +562,10 @@ export default {
       this.roleParam = options.role
     }
 
+    if (this.isMerchant) {
+      this.loadMerchantPaymentConfig()
+    }
+
     // 尝试读取列表带过来的本地缓存订单对象（秒开）
     this.loadCachedOrder()
 
@@ -445,6 +643,85 @@ export default {
     // 图片加载失败降级
     onImageError(idx) {
       this.itemErrors = { ...this.itemErrors, [idx]: true }
+    },
+
+    // 全屏放大查看二维码（最高层级无遮挡）
+    openFullPreview(url) {
+      if (!url) return
+      this.fullPreviewUrl = url
+    },
+
+    closeFullPreview() {
+      this.fullPreviewUrl = ''
+    },
+
+    previewQrcode(url) {
+      this.openFullPreview(url)
+    },
+
+    noop() {},
+
+    loadMerchantPaymentConfig() {
+      api.getMerchantPaymentConfig().then((res) => {
+        if (res) {
+          this.merchantPaymentConfig = {
+            offlineWxQrcode: res.offlineWxQrcode || '',
+            offlineAlipayQrcode: res.offlineAlipayQrcode || '',
+            offlineOtherQrcode: res.offlineOtherQrcode || ''
+          }
+        }
+      }).catch(() => {})
+    },
+
+    openMerchantOfflineModal() {
+      this.showMerchantOfflineModal = true
+      if (!this.merchantPaymentConfig.offlineWxQrcode && this.merchantPaymentConfig.offlineAlipayQrcode) {
+        this.activeMerchantQrType = 'alipay'
+      } else if (!this.merchantPaymentConfig.offlineWxQrcode && !this.merchantPaymentConfig.offlineAlipayQrcode && this.merchantPaymentConfig.offlineOtherQrcode) {
+        this.activeMerchantQrType = 'other'
+      } else {
+        this.activeMerchantQrType = 'wx'
+      }
+      this.loadMerchantPaymentConfig()
+    },
+
+    closeMerchantOfflineModal() {
+      this.showMerchantOfflineModal = false
+    },
+
+    confirmOfflinePaySubmit() {
+      const id = this.order.id || this.order.orderNo || this.orderId
+      this.confirmingOffline = true
+      api.confirmOfflinePay(id).then(() => {
+        this.confirmingOffline = false
+        this.closeMerchantOfflineModal()
+        uni.showToast({ title: '已确认收款', icon: 'success' })
+        this.fetchOrderDetail()
+      }).catch((err) => {
+        this.confirmingOffline = false
+        uni.showToast({ title: (err && err.message) || '确认失败', icon: 'none' })
+      })
+    },
+
+    merchantConfirmOffline() {
+      uni.showModal({
+        title: '收款核验确认',
+        content: `请确认已在线下收到该笔款项 ¥${this.order.amount}？`,
+        confirmText: '确认收到',
+        confirmColor: '#07c160',
+        success: (res) => {
+          if (!res.confirm) return
+          uni.showLoading({ title: '确认中...' })
+          api.confirmOfflinePay(this.order.id).then(() => {
+            uni.hideLoading()
+            uni.showToast({ title: '已确认收款', icon: 'success' })
+            this.fetchOrderDetail()
+          }).catch((err) => {
+            uni.hideLoading()
+            uni.showToast({ title: (err && err.message) || '确认失败', icon: 'none' })
+          })
+        }
+      })
     },
 
     // 复制订单编号
@@ -1138,5 +1415,369 @@ export default {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ==================== 线下付款二维码卡片 ==================== */
+.offline-pay-card {
+  margin: 20rpx 24rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  border: 2rpx dashed #faad14;
+}
+
+.offline-pay-head {
+  margin-bottom: 20rpx;
+}
+
+.offline-pay-card.customer-mode .offline-pay-head {
+  margin-bottom: 0;
+}
+
+.offline-title-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.offline-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.offline-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #1e293b;
+  flex: 1;
+}
+
+.offline-status-badge {
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  font-weight: 500;
+}
+
+.offline-status-badge.unpaid {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.offline-status-badge.paid {
+  background: #e6f7ef;
+  color: #07c160;
+}
+
+.offline-subtitle {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  line-height: 1.4;
+  display: block;
+}
+
+.qrcode-display-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0;
+  background: #fafafa;
+  border-radius: 16rpx;
+}
+
+.pay-qrcode-image {
+  width: 320rpx;
+  height: 320rpx;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.08);
+}
+
+.qrcode-tip {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-top: 14rpx;
+}
+
+.qrcode-empty-box {
+  padding: 30rpx 20rpx;
+  text-align: center;
+  background: #fafafa;
+  border-radius: 16rpx;
+}
+
+.empty-qr-text {
+  font-size: 26rpx;
+  color: #fa8c16;
+}
+
+.pay-paid {
+  color: #07c160 !important;
+  font-weight: 600;
+}
+
+.pay-unpaid {
+  color: #fa8c16 !important;
+  font-weight: 600;
+}
+
+.action-btn.offline-confirm-btn {
+  background: #52c41a;
+  color: #ffffff;
+}
+
+/* ==================== 店家端线下核验收款弹窗 ==================== */
+.merchant-qr-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.merchant-qr-card {
+  width: 100%;
+  max-width: 620rpx;
+  background: #ffffff;
+  border-radius: 28rpx;
+  overflow: hidden;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.merchant-qr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.merchant-qr-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.merchant-qr-close {
+  font-size: 36rpx;
+  color: #9ca3af;
+  padding: 0 10rpx;
+}
+
+.merchant-qr-order-info {
+  background: #f8fafc;
+  padding: 16rpx 32rpx;
+  border-bottom: 1rpx solid #f1f5f9;
+}
+
+.merchant-qr-row {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.merchant-qr-row .row-label {
+  color: #64748b;
+  width: 140rpx;
+}
+
+.merchant-qr-row .row-val {
+  color: #334155;
+  font-weight: 500;
+}
+
+.merchant-qr-row .row-val.price {
+  color: #ff4d4f;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.merchant-qr-tabs {
+  display: flex;
+  padding: 20rpx 32rpx 10rpx;
+  gap: 16rpx;
+}
+
+.merchant-qr-tab {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  font-size: 24rpx;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 12rpx;
+  border: 1rpx solid transparent;
+  transition: all 0.2s;
+}
+
+.merchant-qr-tab.active {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: #93c5fd;
+  font-weight: 600;
+}
+
+.merchant-qr-img-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 32rpx;
+  min-height: 400rpx;
+}
+
+.merchant-qr-img {
+  width: 380rpx;
+  height: 380rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.merchant-qr-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+}
+
+.merchant-qr-empty .empty-icon {
+  font-size: 72rpx;
+  margin-bottom: 16rpx;
+}
+
+.merchant-qr-empty .empty-text {
+  font-size: 26rpx;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.merchant-qr-empty .empty-tip {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-top: 8rpx;
+}
+
+.merchant-qr-hint {
+  font-size: 22rpx;
+  color: #64748b;
+  margin-top: 16rpx;
+}
+
+.merchant-qr-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx 32rpx 32rpx;
+  border-top: 1rpx solid #f1f5f9;
+}
+
+.merchant-qr-actions .qr-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  text-align: center;
+  font-weight: 600;
+}
+
+.merchant-qr-actions .qr-btn.cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.merchant-qr-actions .qr-btn.confirm {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 6rpx 16rpx rgba(22, 163, 74, 0.35);
+}
+
+.action-btn.offline-confirm-btn:active {
+  background: #389e0d;
+}
+
+.offline-type-tabs {
+  display: flex;
+  margin: 20rpx 0 14rpx;
+  gap: 16rpx;
+}
+
+.offline-type-tab {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  font-size: 24rpx;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 12rpx;
+  border: 1rpx solid transparent;
+  transition: all 0.2s;
+}
+
+.offline-type-tab.active {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: #93c5fd;
+  font-weight: 600;
+}
+
+/* ==================== 全屏二维码无遮挡放大浮层 ==================== */
+.full-screen-qr-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100005;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.full-screen-qr-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.full-screen-qr-img {
+  width: 580rpx;
+  height: 580rpx;
+  max-width: 85vw;
+  max-height: 85vw;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.5);
+  padding: 16rpx;
+  box-sizing: border-box;
+}
+
+.full-screen-qr-bar {
+  margin-top: 36rpx;
+}
+
+.full-screen-qr-tip {
+  color: #e2e8f0;
+  font-size: 26rpx;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 10rpx 28rpx;
+  border-radius: 40rpx;
 }
 </style>

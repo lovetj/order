@@ -29,6 +29,12 @@ public class OrderCreateDTO {
     /** 备注 */
     private String remark;
 
+    /** 支付方式 1微信线上 2支付宝线上 3线下微信 4线下支付宝 5线下其他（默认3） */
+    private Integer payType;
+
+    /** 支付大类 1线上支付 2线下支付（默认2） */
+    private Integer payMode;
+
     /** 使用的用户优惠券ID（可选） */
     private String userCouponId;
 

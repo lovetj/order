@@ -23,6 +23,32 @@ public class OrderVO {
     private String status;
     /** 前端使用中文状态文案 */
     private String statusText;
+
+    /** 支付方式 1微信线上 2支付宝线上 3线下微信 4线下支付宝 5线下其他 99未支付 */
+    private Integer payType;
+    /** 支付方式文案 */
+    private String payTypeText;
+    /** 支付大类 1线上支付 2线下支付 */
+    private Integer payMode;
+    /** 支付状态 0待支付 1支付中 2已支付 3支付失败/已关闭 */
+    private Integer payStatus;
+    /** 支付状态文案 */
+    private String payStatusText;
+    /** 线下支付收款二维码快照URL */
+    private String payQrcode;
+    /** 线下支付 - 微信收款码 */
+    private String offlineWxQrcode;
+    /** 线下支付 - 支付宝收款码 */
+    private String offlineAlipayQrcode;
+    /** 线下支付 - 其他收款码 */
+    private String offlineOtherQrcode;
+    /** 关联支付流水号 */
+    private String paymentNo;
+    /** 支付完成时间 */
+    private String payTime;
+    /** 线下确认到账时间 */
+    private String offlinePayTime;
+
     private String createTime;
     private BigDecimal amount;
     private BigDecimal productTotal;

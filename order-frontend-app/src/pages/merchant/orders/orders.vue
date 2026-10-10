@@ -62,6 +62,9 @@
                 {{ item.diningType === 2 ? '外带' : '堂食' }}
               </text>
               <text class="order-table">{{ item.diningType === 2 ? '自提免占桌' : '桌号 ' + item.table }}</text>
+              <text v-if="item.payMode === 2" class="pay-tag" :class="item.payStatus === 2 ? 'paid' : 'unpaid'">
+                {{ item.payStatus === 2 ? '线下已收款' : '线下待核验' }}
+              </text>
             </view>
             <view class="order-status" :class="'status-' + item.status">{{item.statusText}}</view>
           </view>
@@ -89,8 +92,14 @@
 
           <view
             class="order-actions"
-            v-if="(item.status === 'done' || item.statusText === '已完成') || item.action"
+            v-if="(item.status === 'done' || item.statusText === '已完成') || item.action || (item.payMode === 2 && item.payStatus !== 2 && item.status !== 'canceled')"
           >
+            <!-- 线下支付收款核验按钮 -->
+            <view
+              class="act-btn success"
+              v-if="item.payMode === 2 && item.payStatus !== 2 && item.status !== 'canceled'"
+              @click.stop="openOfflinePayModal(item)"
+            >确认已收款</view>
             <view
               class="act-btn"
               v-if="item.status === 'done' || item.statusText === '已完成'"
@@ -123,6 +132,87 @@
       <!-- 底部安全留白 -->
       <view class="list-bottom-space"></view>
     </scroll-view>
+
+    <!-- 线下收款核验与出示收款码弹窗 -->
+    <view v-if="showQrcodeModal" class="qr-modal-mask" @click="closeOfflinePayModal">
+      <view class="qr-modal-card" @click.stop="noop">
+        <view class="qr-modal-head">
+          <text class="qr-modal-title">出示收款码 & 核验收款</text>
+          <text class="qr-modal-close" @click="closeOfflinePayModal">✕</text>
+        </view>
+
+        <view class="qr-modal-order-info" v-if="currentOfflineOrder">
+          <view class="qr-order-row">
+            <text class="qr-label">订单编号：</text>
+            <text class="qr-val">{{ currentOfflineOrder.orderNo || currentOfflineOrder.id }}</text>
+          </view>
+          <view class="qr-order-row">
+            <text class="qr-label">应收金额：</text>
+            <text class="qr-val price">¥{{ currentOfflineOrder.amount }}</text>
+          </view>
+        </view>
+
+        <!-- 收款方式类型选择切换 -->
+        <view class="qr-type-tabs">
+          <view
+            class="qr-type-tab"
+            :class="{ active: activeQrType === 'wx' }"
+            @click="switchQrType('wx')"
+          >
+            微信收款码
+          </view>
+          <view
+            class="qr-type-tab"
+            :class="{ active: activeQrType === 'alipay' }"
+            @click="switchQrType('alipay')"
+          >
+            支付宝收款码
+          </view>
+          <view
+            class="qr-type-tab"
+            :class="{ active: activeQrType === 'other' }"
+            @click="switchQrType('other')"
+          >
+            其他收款码
+          </view>
+        </view>
+
+        <!-- 收款码展示区域 -->
+        <view class="qr-image-wrapper">
+          <image
+            v-if="currentQrcodeUrl"
+            :src="currentQrcodeUrl"
+            mode="aspectFit"
+            class="qr-image-display"
+            @click="openFullPreview(currentQrcodeUrl)"
+          />
+          <view v-else class="qr-empty-box">
+            <text class="qr-empty-icon">📷</text>
+            <text class="qr-empty-tip">未上传该类型的收款码</text>
+            <text class="qr-empty-sub">可在“我的 -> 支付管理”中上传维护</text>
+          </view>
+          <text v-if="currentQrcodeUrl" class="qr-preview-hint">点击二维码可全屏放大展示给顾客</text>
+        </view>
+
+        <!-- 底部操作按钮 -->
+        <view class="qr-modal-actions">
+          <button class="qr-btn cancel" @click="closeOfflinePayModal">取消</button>
+          <button class="qr-btn confirm" :loading="confirmingOffline" :disabled="confirmingOffline" @click="confirmOfflinePaySubmit">
+            确认已收到款项
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 全屏收款码大图浮层（层级高于一切弹窗，避免被确认弹窗遮盖） -->
+    <view v-if="fullPreviewUrl" class="full-screen-qr-mask" @click="closeFullPreview">
+      <view class="full-screen-qr-content" @click.stop="noop">
+        <image :src="fullPreviewUrl" mode="aspectFit" class="full-screen-qr-img" />
+        <view class="full-screen-qr-bar">
+          <text class="full-screen-qr-tip">轻触任意空白区域关闭全屏</text>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -151,7 +241,26 @@ export default {
       hasMore: true,
       loading: false,
       loadingMore: false,
-      refreshing: false
+      refreshing: false,
+      // 线下收款出示二维码弹窗
+      showQrcodeModal: false,
+      currentOfflineOrder: null,
+      activeQrType: 'wx', // 'wx' | 'alipay' | 'other'
+      confirmingOffline: false,
+      fullPreviewUrl: '',
+      paymentConfig: {
+        offlineWxQrcode: '',
+        offlineAlipayQrcode: '',
+        offlineOtherQrcode: ''
+      }
+    }
+  },
+  computed: {
+    currentQrcodeUrl() {
+      if (this.activeQrType === 'wx') return this.paymentConfig.offlineWxQrcode || ''
+      if (this.activeQrType === 'alipay') return this.paymentConfig.offlineAlipayQrcode || ''
+      if (this.activeQrType === 'other') return this.paymentConfig.offlineOtherQrcode || ''
+      return ''
     }
   },
   onShow() {
@@ -163,12 +272,14 @@ export default {
       uni.reLaunch({ url: '/pages/login/login?role=merchant' })
       return
     }
+    this.loadPaymentConfig()
     this.loadCounts()
     this.loadList(true)
   },
   // 底部导航切换时刷新当前页面数据
   onTabRefresh() {
     if (!app.globalData.isLogin()) return
+    this.loadPaymentConfig()
     this.loadCounts()
     this.loadList(true)
   },
@@ -287,6 +398,74 @@ export default {
     afterAction() {
       this.loadCounts()
       this.loadList(true)
+    },
+
+    noop() {},
+
+    // 加载店铺收款码配置
+    loadPaymentConfig() {
+      api.getMerchantPaymentConfig().then((res) => {
+        if (res) {
+          this.paymentConfig = {
+            offlineWxQrcode: res.offlineWxQrcode || '',
+            offlineAlipayQrcode: res.offlineAlipayQrcode || '',
+            offlineOtherQrcode: res.offlineOtherQrcode || ''
+          }
+        }
+      }).catch(() => {})
+    },
+
+    // 点击“确认已收款”：先打开出示收款码弹窗，支持选择收款码类型
+    openOfflinePayModal(order) {
+      this.currentOfflineOrder = order
+      this.showQrcodeModal = true
+      // 默认选择有图片的收款码类型
+      if (!this.paymentConfig.offlineWxQrcode && this.paymentConfig.offlineAlipayQrcode) {
+        this.activeQrType = 'alipay'
+      } else if (!this.paymentConfig.offlineWxQrcode && !this.paymentConfig.offlineAlipayQrcode && this.paymentConfig.offlineOtherQrcode) {
+        this.activeQrType = 'other'
+      } else {
+        this.activeQrType = 'wx'
+      }
+      this.loadPaymentConfig()
+    },
+
+    closeOfflinePayModal() {
+      this.showQrcodeModal = false
+      this.currentOfflineOrder = null
+    },
+
+    switchQrType(type) {
+      this.activeQrType = type
+    },
+
+    openFullPreview(url) {
+      if (!url) return
+      this.fullPreviewUrl = url
+    },
+
+    closeFullPreview() {
+      this.fullPreviewUrl = ''
+    },
+
+    previewQr(url) {
+      this.openFullPreview(url)
+    },
+
+    confirmOfflinePaySubmit() {
+      if (!this.currentOfflineOrder) return
+      const order = this.currentOfflineOrder
+      const id = order.id || order.orderNo
+      this.confirmingOffline = true
+      api.confirmOfflinePay(id).then(() => {
+        this.confirmingOffline = false
+        this.closeOfflinePayModal()
+        uni.showToast({ title: '已确认收款', icon: 'success' })
+        this.afterAction()
+      }).catch((err) => {
+        this.confirmingOffline = false
+        uni.showToast({ title: (err && err.message) || '确认失败', icon: 'none' })
+      })
     },
 
     // 查看/打印小票（仅已完成订单）
@@ -582,6 +761,31 @@ export default {
   font-weight: 600;
 }
 
+.act-btn.success {
+  background: #52c41a;
+  color: #fff;
+  border-color: #52c41a;
+}
+
+.pay-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-left: 12rpx;
+}
+
+.pay-tag.unpaid {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1rpx solid #ffd591;
+}
+
+.pay-tag.paid {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1rpx solid #b7eb8f;
+}
+
 .act-btn.danger {
   border-color: #ff4d4f;
   color: #ff4d4f;
@@ -666,5 +870,231 @@ export default {
 @keyframes spinner-rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ==================== 线下收款核验弹窗 ==================== */
+.qr-modal-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.qr-modal-card {
+  width: 100%;
+  max-width: 620rpx;
+  background: #ffffff;
+  border-radius: 28rpx;
+  overflow: hidden;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.qr-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.qr-modal-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.qr-modal-close {
+  font-size: 36rpx;
+  color: #9ca3af;
+  padding: 0 10rpx;
+}
+
+.qr-modal-order-info {
+  background: #f8fafc;
+  padding: 16rpx 32rpx;
+  border-bottom: 1rpx solid #f1f5f9;
+}
+
+.qr-order-row {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.qr-order-row .qr-label {
+  color: #64748b;
+  width: 140rpx;
+}
+
+.qr-order-row .qr-val {
+  color: #334155;
+  font-weight: 500;
+}
+
+.qr-order-row .qr-val.price {
+  color: #ff4d4f;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.qr-type-tabs {
+  display: flex;
+  padding: 20rpx 32rpx 10rpx;
+  gap: 16rpx;
+}
+
+.qr-type-tab {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  font-size: 24rpx;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 12rpx;
+  border: 1rpx solid transparent;
+  transition: all 0.2s;
+}
+
+.qr-type-tab.active {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: #93c5fd;
+  font-weight: 600;
+}
+
+.qr-image-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 32rpx;
+  min-height: 400rpx;
+}
+
+.qr-image-display {
+  width: 380rpx;
+  height: 380rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.qr-empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+}
+
+.qr-empty-icon {
+  font-size: 72rpx;
+  margin-bottom: 16rpx;
+}
+
+.qr-empty-tip {
+  font-size: 26rpx;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.qr-empty-sub {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-top: 8rpx;
+}
+
+.qr-preview-hint {
+  font-size: 22rpx;
+  color: #64748b;
+  margin-top: 16rpx;
+}
+
+.qr-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx 32rpx 32rpx;
+  border-top: 1rpx solid #f1f5f9;
+}
+
+.qr-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  text-align: center;
+  font-weight: 600;
+}
+
+.qr-btn.cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.qr-btn.confirm {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 6rpx 16rpx rgba(22, 163, 74, 0.35);
+}
+
+/* ==================== 全屏二维码无遮挡放大浮层 ==================== */
+.full-screen-qr-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100005;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.full-screen-qr-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.full-screen-qr-img {
+  width: 580rpx;
+  height: 580rpx;
+  max-width: 85vw;
+  max-height: 85vw;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.5);
+  padding: 16rpx;
+  box-sizing: border-box;
+}
+
+.full-screen-qr-bar {
+  margin-top: 36rpx;
+}
+
+.full-screen-qr-tip {
+  color: #e2e8f0;
+  font-size: 26rpx;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 10rpx 28rpx;
+  border-radius: 40rpx;
 }
 </style>

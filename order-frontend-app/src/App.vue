@@ -31,6 +31,10 @@ export default {
       const shopId = query.shopId || ''
       const tableNo = query.tableNo || ''
       const tableId = query.tableId || ''
+      // 扫码进入携带桌位上下文：明确是顾客扫桌码点餐行为，自动设置为顾客身份
+      if (tableId || tableNo) {
+        this.setRole('customer')
+      }
       // 切换店铺：清空旧店缓存
       if (shopId && this.shopId && String(shopId) !== String(this.shopId)) {
         this.clearShopScopedCache()
@@ -288,5 +292,13 @@ button {
 /* 通用按钮重置（uni-app 需要清除 button 默认边框） */
 button::after {
   border: none;
+}
+
+/* 解决 uni.previewImage 在 H5 端被自定义弹窗(如线下收款核验等)遮挡的问题 */
+#u-a-p,
+#u-a-p > div,
+uni-image-preview,
+.uni-preview-image {
+  z-index: 999999 !important;
 }
 </style>

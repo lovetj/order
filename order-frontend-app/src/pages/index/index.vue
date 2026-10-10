@@ -97,7 +97,9 @@ export default {
   },
 
   onShow() {
-    if (!app.globalData.role) {
+    if (app.globalData.shopId || app.globalData.tableId || uni.getStorageSync('shopId') || uni.getStorageSync('tableId')) {
+      app.globalData.setRole('customer')
+    } else if (!app.globalData.role) {
       uni.reLaunch({ url: '/pages/role/role' })
       return
     }

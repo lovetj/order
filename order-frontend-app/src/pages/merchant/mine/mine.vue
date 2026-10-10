@@ -53,6 +53,7 @@ export default {
       uploadingAvatar: false,
       menus: [
         { icon: '🏬', name: '店铺信息', key: 'info' },
+        { icon: '💳', name: '支付管理', key: 'payment' },
         { icon: '🏷️', name: '分类管理', key: 'category' },
         { icon: '🎫', name: '优惠券管理', key: 'coupon' },
         { icon: '🎁', name: '积分商品管理', key: 'pointsGoods' },
@@ -217,6 +218,10 @@ export default {
       }
       if (key === 'info') {
         uni.navigateTo({ url: '/pages/merchant/shop-info/shop-info' })
+        return
+      }
+      if (key === 'payment') {
+        uni.navigateTo({ url: '/pages/merchant/payment/payment' })
         return
       }
       uni.showToast({ title: '功能开发中', icon: 'none' })
