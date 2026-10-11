@@ -18,8 +18,12 @@
         <view class="scan-tip-btn" @click="scanTable">立即扫码</view>
       </view>
     </view>
+
+    <!-- 统一页面加载动画 -->
+    <page-loading v-if="loading && !needScan" text="正在进入店铺..." />
+
     <!-- 中部滚动区 -->
-    <scroll-view class="layout-body" scroll-y>
+    <scroll-view v-else class="layout-body" scroll-y>
     <!-- 门店卡片 -->
     <view class="shop-card">
       <view class="shop-top">
@@ -86,6 +90,7 @@ export default {
       ],
       notices: [],
       needScan: false,
+      loading: false,
       // 记录已回查过桌号的桌位ID，避免重复请求；桌位变化时强制重新反查
       _resolvedTableId: ''
     }
@@ -154,6 +159,9 @@ export default {
 
     // 加载门店信息
     loadShop() {
+      if (!this.shop.name) {
+        this.loading = true
+      }
       api.getShopInfo().then((shop) => {
         // 无店铺数据：清空门店字段，不展示残留/默认的假信息
         if (!shop) {
@@ -172,8 +180,9 @@ export default {
         }
         this.notices = notices
       }).catch(() => {
-        // 请求失败：清空门店字段，避免残留/串店展示上一家店的宣传语
         this.resetShopInfo()
+      }).finally(() => {
+        this.loading = false
       })
     },
 

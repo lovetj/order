@@ -1,7 +1,11 @@
 <template>
   <view class="page layout-page">
     <bottom-nav />
-    <scroll-view class="layout-body" scroll-y>
+
+    <!-- 统一页面加载动画 -->
+    <page-loading v-if="loading" text="正在加载管理后台数据..." role="merchant" />
+
+    <scroll-view v-else class="layout-body" scroll-y>
     <view class="shop-bar">
       <view>
         <view class="shop-name">{{shop.name}}</view>
@@ -42,7 +46,8 @@ export default {
     return {
       shop: { name: '扫码点餐', status: '营业中' },
       overview: [],
-      weekSales: []
+      weekSales: [],
+      loading: false
     }
   },
   onShow() {
@@ -55,18 +60,27 @@ export default {
       uni.reLaunch({ url: '/pages/login/login?role=merchant' })
       return
     }
-    this.loadShop()
-    this.loadDashboard()
+    this.loadAll()
   },
   // 底部导航切换时刷新当前页面数据
   onTabRefresh() {
     if (!app.globalData.isLogin()) return
-    this.loadShop()
-    this.loadDashboard()
+    this.loadAll()
   },
   methods: {
+    loadAll() {
+      if (this.overview.length === 0) {
+        this.loading = true
+      }
+      Promise.allSettled([
+        this.loadShop(),
+        this.loadDashboard()
+      ]).finally(() => {
+        this.loading = false
+      })
+    },
     loadShop() {
-      api.getMerchantShopInfo().then((shop) => {
+      return api.getMerchantShopInfo().then((shop) => {
         if (!shop) return
         this.shop = {
           name: shop.name || '扫码点餐',
@@ -75,7 +89,7 @@ export default {
       }).catch(() => {})
     },
     loadDashboard() {
-      api.getDashboard().then((data) => {
+      return api.getDashboard().then((data) => {
         if (!data) return
         this.overview = data.overview || []
         this.weekSales = data.weekSales || []

@@ -1,5 +1,9 @@
 <template>
   <view class="page">
+    <!-- 统一页面加载动画 -->
+    <page-loading v-if="loading" text="正在加载菜品规格..." role="customer" />
+
+    <block v-else>
     <!-- 菜品信息头部卡片 -->
     <view class="dish-head">
       <view class="dish-thumb">
@@ -82,6 +86,7 @@
         </view>
       </view>
     </view>
+    </block>
   </view>
 </template>
 
@@ -101,7 +106,8 @@ export default {
       totalPrice: 0,
       quantity: 1,
       // 起购份数（后端 minBuy，默认 1）
-      minBuy: 1
+      minBuy: 1,
+      loading: true
     }
   },
 
@@ -140,7 +146,9 @@ export default {
         this.minBuy = minBuy
         this.quantity = minBuy
         this.calcPrice()
-      }).catch(() => {})
+      }).catch(() => {}).finally(() => {
+        this.loading = false
+      })
     },
 
     // 选择规格：WXML 不支持 indexOf，直接用 selected 布尔标记

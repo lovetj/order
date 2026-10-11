@@ -1,5 +1,9 @@
 <template>
   <view class="page">
+    <!-- 统一页面加载动效 -->
+    <page-loading v-if="loading" text="正在生成小票预览..." role="merchant" />
+
+    <block v-else>
     <!-- 小票预览 -->
     <view class="receipt-paper">
       <view class="r-shop">{{receipt.shopName}}</view>
@@ -53,6 +57,7 @@
       <view class="op-btn primary" @click="print">🖨 打印小票</view>
       <view class="op-btn" @click="copyText">📋 复制内容</view>
     </view>
+    </block>
   </view>
 </template>
 

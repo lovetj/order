@@ -26,6 +26,10 @@
       </view>
     </view>
 
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在生成经营报表..." role="merchant" />
+
+    <block v-else>
     <!-- 汇总卡片 -->
     <view class="summary-card">
       <view class="summary-main">
@@ -96,6 +100,7 @@
       </template>
       <view v-else class="empty">当前区间暂无数据</view>
     </view>
+    </block>
   </view>
 </template>
 

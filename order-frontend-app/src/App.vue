@@ -301,4 +301,46 @@ uni-image-preview,
 .uni-preview-image {
   z-index: 999999 !important;
 }
+
+/* 全系统统一加载动画规范样式 */
+@keyframes spinner-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.mini-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+  box-sizing: border-box;
+}
+
+.customer-spinner {
+  border: 4rpx solid rgba(255, 107, 53, 0.15);
+  border-top-color: #ff6b35;
+}
+
+.merchant-spinner {
+  border: 4rpx solid rgba(47, 128, 237, 0.15);
+  border-top-color: #2f80ed;
+}
+
+.list-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+}
+
+.list-loading-first {
+  padding: 100rpx 0;
+}
+
+.list-loading-text {
+  font-size: 26rpx;
+  color: var(--text-sub);
+  margin-top: 16rpx;
+}
 </style>

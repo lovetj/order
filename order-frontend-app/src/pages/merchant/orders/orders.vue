@@ -41,11 +41,8 @@
       @refresherrefresh="onRefresh"
       @scrolltolower="loadMore"
     >
-      <!-- 页面/Tab切换或初次加载动画 -->
-      <view v-if="loading" class="list-loading list-loading-first">
-        <view class="mini-spinner merchant-spinner"></view>
-        <text class="list-loading-text">正在加载订单...</text>
-      </view>
+      <!-- 页面/Tab切换或初次加载统一动画 -->
+      <page-loading v-if="loading" text="正在加载订单..." role="merchant" />
 
       <!-- 空状态 -->
       <view v-else-if="list.length === 0" class="empty">

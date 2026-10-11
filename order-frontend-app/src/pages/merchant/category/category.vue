@@ -2,31 +2,36 @@
   <view class="page">
     <view class="tip">共 {{list.length}} 个分类，点击名称可修改</view>
 
-    <view class="cat-card" v-for="(item, index) in list" :key="item.id">
-      <view class="cat-sort">{{index + 1}}</view>
-      <view class="cat-info" @click="editCategory(item.id)">
-        <view class="cat-name">{{item.name}}</view>
-        <view class="cat-code text-sub">编码：{{item.code}}</view>
-      </view>
-      <view class="cat-actions">
-        <view class="cat-status" :class="item.status === 1 ? 'on' : 'off'" @click.stop="toggleStatus(item.id)">
-          {{item.status === 1 ? '启用' : '禁用'}}
-        </view>
-        <view
-          class="cat-op up"
-          :class="{ disabled: index === 0 }"
-          @click.stop="moveUp(item.id)"
-        >↑</view>
-        <view
-          class="cat-op down"
-          :class="{ disabled: index === list.length - 1 }"
-          @click.stop="moveDown(item.id)"
-        >↓</view>
-        <view class="cat-op del" @click.stop="deleteCategory(item.id)">删除</view>
-      </view>
-    </view>
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载分类数据..." role="merchant" />
 
-    <view v-if="list.length === 0" class="empty">暂无分类，点击右下角新增</view>
+    <template v-else-if="list.length > 0">
+      <view class="cat-card" v-for="(item, index) in list" :key="item.id">
+        <view class="cat-sort">{{index + 1}}</view>
+        <view class="cat-info" @click="editCategory(item.id)">
+          <view class="cat-name">{{item.name}}</view>
+          <view class="cat-code text-sub">编码：{{item.code}}</view>
+        </view>
+        <view class="cat-actions">
+          <view class="cat-status" :class="item.status === 1 ? 'on' : 'off'" @click.stop="toggleStatus(item.id)">
+            {{item.status === 1 ? '启用' : '禁用'}}
+          </view>
+          <view
+            class="cat-op up"
+            :class="{ disabled: index === 0 }"
+            @click.stop="moveUp(item.id)"
+          >↑</view>
+          <view
+            class="cat-op down"
+            :class="{ disabled: index === list.length - 1 }"
+            @click.stop="moveDown(item.id)"
+          >↓</view>
+          <view class="cat-op del" @click.stop="deleteCategory(item.id)">删除</view>
+        </view>
+      </view>
+    </template>
+
+    <view v-else class="empty">暂无分类，点击右下角新增</view>
 
     <view class="fab" @click="openAdd">＋</view>
 

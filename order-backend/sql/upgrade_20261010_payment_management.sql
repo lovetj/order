@@ -199,12 +199,3 @@ CREATE TABLE IF NOT EXISTS `payment` (
   KEY `idx_pay_status` (`pay_status`),
   KEY `idx_transaction_id` (`transaction_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='支付流水表';
-
--- ------------------------------------------------------------
--- 4. 插入演示店铺初始配置数据（如已存在则忽略）
--- ------------------------------------------------------------
-INSERT INTO `shop_payment_config` (`id`, `shop_id`, `offline_pay_enabled`, `offline_wx_qrcode`, `offline_alipay_qrcode`, `offline_other_qrcode`, `offline_pay_desc`, `online_wx_pay_enabled`, `online_alipay_pay_enabled`)
-VALUES 
-('spc001', '1', 1, NULL, NULL, NULL, '请向店员出示付款码或扫描店内二维码支付', 1, 1),
-('spc002', '2', 1, NULL, NULL, NULL, '分店支持线下扫码付款及线上支付', 1, 1)
-ON DUPLICATE KEY UPDATE `update_time` = NOW();

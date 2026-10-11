@@ -1,7 +1,11 @@
 <template>
   <view class="page layout-page">
     <bottom-nav />
-    <scroll-view class="layout-body" scroll-y>
+
+    <!-- 统一页面加载动效 -->
+    <page-loading v-if="loading" text="正在加载店铺信息..." role="merchant" />
+
+    <scroll-view v-else class="layout-body" scroll-y>
     <view class="profile">
       <view class="avatar-wrap" @click="onAvatarTap">
         <image v-if="shop.avatarUrl" class="avatar-img" :src="shop.avatarUrl" mode="aspectFill" />
@@ -51,6 +55,7 @@ export default {
         status: '营业中'
       },
       uploadingAvatar: false,
+      loading: false,
       menus: [
         { icon: '🏬', name: '店铺信息', key: 'info' },
         { icon: '💳', name: '支付管理', key: 'payment' },
@@ -73,23 +78,32 @@ export default {
       uni.reLaunch({ url: '/pages/login/login?role=merchant' })
       return
     }
-    this.loadShop()
-    this.loadProfile()
+    this.loadAll()
   },
   // 底部导航切换时刷新当前页面数据
   onTabRefresh() {
     if (!app.globalData.isLogin()) return
-    this.loadShop()
-    this.loadProfile()
+    this.loadAll()
   },
   methods: {
+    loadAll() {
+      if (!this.shop.owner) {
+        this.loading = true
+      }
+      Promise.allSettled([
+        this.loadShop(),
+        this.loadProfile()
+      ]).finally(() => {
+        this.loading = false
+      })
+    },
     loadShop() {
       // 确保店铺ID与登录账号一致（切换账号后刷新）
       const admin = app.globalData.admin || {}
       if (admin.shopId) {
         app.globalData.setShopId(admin.shopId)
       }
-      api.getMerchantShopInfo().then((shop) => {
+      return api.getMerchantShopInfo().then((shop) => {
         if (!shop) return
         this.shop = {
           ...this.shop,
@@ -104,7 +118,7 @@ export default {
 
     // 加载店家账号头像（后端返回完整可访问地址，未设置则为空）
     loadProfile() {
-      api.getMerchantProfile().then((profile) => {
+      return api.getMerchantProfile().then((profile) => {
         this.shop.avatarUrl = (profile && profile.avatar) || ''
       }).catch(() => {})
     },

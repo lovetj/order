@@ -1,5 +1,5 @@
 <template>
-  <view class="bottom-nav">
+  <view class="bottom-nav" :class="isMerchant ? 'theme-merchant' : 'theme-customer'">
     <view
       v-for="(item, index) in list"
       :key="item.path"
@@ -33,21 +33,23 @@ export default {
   data() {
     return {
       list: [],
-      current: ''
+      current: '',
+      isMerchant: false
     }
   },
 
   created() {
     const app = getApp()
     const role = (app && app.globalData && app.globalData.role) || uni.getStorageSync('role') || 'customer'
-    this.list = role === 'merchant' ? MERCHANT_TABS : CUSTOMER_TABS
+    this.isMerchant = role === 'merchant'
+    this.list = this.isMerchant ? MERCHANT_TABS : CUSTOMER_TABS
     const pages = getCurrentPages()
     const route = pages.length ? '/' + pages[pages.length - 1].route : ''
     this.current = route
   },
 
   methods: {
-    // 页签切换：reLaunch 关闭其他页面，由目标页 onShow 自行刷新数据
+    // 页签切换：reLaunch 关闭其他页面，由目标页统一加载动效无缝承接
     go(path) {
       if (path === this.current) {
         uni.reLaunch({ url: path })
@@ -59,7 +61,7 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss" scoped>
 .bottom-nav {
   position: fixed;
   left: 0;
@@ -79,6 +81,11 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 12rpx 0 8rpx;
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.92);
+  }
 }
 
 .nav-icon {
@@ -92,8 +99,13 @@ export default {
   margin-top: 4rpx;
 }
 
-.nav-item.active .nav-text {
+.theme-customer .nav-item.active .nav-text {
   color: #ff6b35;
+  font-weight: 600;
+}
+
+.theme-merchant .nav-item.active .nav-text {
+  color: #2f80ed;
   font-weight: 600;
 }
 </style>

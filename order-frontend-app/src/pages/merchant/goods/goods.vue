@@ -204,11 +204,8 @@
             </view>
           </view>
 
-          <!-- 首屏加载动画 -->
-          <view v-if="listLoading" class="list-loading">
-            <view class="mini-spinner"></view>
-            <text class="list-loading-text">正在加载商品...</text>
-          </view>
+          <!-- 首屏加载统一动画 -->
+          <page-loading v-if="listLoading" text="正在加载商品列表..." role="merchant" />
 
           <!-- 空状态 -->
           <view v-if="!listLoading && list.length === 0" class="empty-wrap">

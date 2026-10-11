@@ -1,5 +1,8 @@
 <template>
   <view class="map-pick-page">
+    <!-- 统一地图加载过渡 -->
+    <page-loading v-if="mapLoading" mode="fullscreen" text="正在加载地图..." role="merchant" />
+
     <!-- 顶部搜索栏 -->
     <view class="search-bar">
       <view class="search-box">
@@ -78,6 +81,7 @@ function loadAmap() {
 export default {
   data() {
     return {
+      mapLoading: true,
       keyword: '',
       list: [],
       showResult: false,
@@ -142,7 +146,9 @@ export default {
         this.map.on('zoomend', () => this.onMapSettle())
         // 有初始中心则先反显一次
         if (this._initCenter) this.regeo()
+        this.mapLoading = false
       }).catch(() => {
+        this.mapLoading = false
         uni.showToast({ title: '高德地图加载失败，请检查网络', icon: 'none' })
       })
     },

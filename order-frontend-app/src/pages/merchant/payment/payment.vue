@@ -1,5 +1,9 @@
 <template>
   <view class="page-container">
+    <!-- 统一页面加载动效 -->
+    <page-loading v-if="loading" text="正在加载支付配置..." role="merchant" />
+
+    <block v-else>
     <!-- 未保存修改浮动高亮提示条 -->
     <view v-if="isModified" class="unsaved-alert-bar">
       <view class="unsaved-alert-left">
@@ -134,6 +138,7 @@
         {{ isModified ? '保存支付设置 (待保存)' : '保存支付设置' }}
       </button>
     </view>
+    </block>
   </view>
 </template>
 
@@ -144,6 +149,7 @@ export default {
   data() {
     return {
       saving: false,
+      loading: true,
       initialLoaded: false,
       forceBack: false,
       form: {
@@ -207,9 +213,8 @@ export default {
   },
   methods: {
     loadConfig() {
-      uni.showLoading({ title: '加载中...' })
+      this.loading = true
       api.getMerchantPaymentConfig().then((res) => {
-        uni.hideLoading()
         if (res) {
           const configData = {
             offlinePayEnabled: res.offlinePayEnabled == null ? true : res.offlinePayEnabled === 1,
@@ -224,8 +229,9 @@ export default {
           this.initialLoaded = true
         }
       }).catch((err) => {
-        uni.hideLoading()
         uni.showToast({ title: (err && err.message) || '加载失败', icon: 'none' })
+      }).finally(() => {
+        this.loading = false
       })
     },
 

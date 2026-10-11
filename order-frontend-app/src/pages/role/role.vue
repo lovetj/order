@@ -1,5 +1,8 @@
 <template>
-  <view v-if="!redirecting" class="role-page">
+  <!-- 统一跳转加载过渡动效 -->
+  <page-loading v-if="redirecting" mode="fullscreen" text="正在进入点餐系统..." role="customer" />
+
+  <view v-else class="role-page">
     <view class="hero">
       <view class="title">扫码点餐</view>
       <view class="subtitle">请选择你的身份进入</view>

@@ -1,6 +1,9 @@
 <template>
   <view class="page">
-    <template v-if="list.length > 0">
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载兑换记录..." role="customer" />
+
+    <template v-else-if="list.length > 0">
       <view class="record-card" v-for="item in list" :key="item.id">
         <view class="record-thumb">
           <image v-if="item.imageUrl" class="record-thumb-img" :src="item.goodsImage" mode="aspectFill"></image>

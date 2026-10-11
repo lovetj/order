@@ -66,11 +66,12 @@
       </template>
     </view>
 
-    <!-- 加载中占位 -->
-    <view v-if="loading && !order.id" class="loading-state">
-      <view class="mini-spinner" :class="isMerchant ? 'merchant-spinner' : 'customer-spinner'"></view>
-      <text class="loading-text">正在加载订单详情...</text>
-    </view>
+    <!-- 统一加载中占位动效 -->
+    <page-loading
+      v-if="loading && !order.id"
+      :role="isMerchant ? 'merchant' : 'customer'"
+      text="正在加载订单详情..."
+    />
 
     <!-- 主体内容卡片列表 -->
     <view v-else-if="order.id" class="detail-body">

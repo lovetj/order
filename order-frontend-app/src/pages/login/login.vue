@@ -1,6 +1,13 @@
 <template>
   <!-- 登录页（顾客=昵称+头像快速登录 / 店家=账号密码） -->
   <view class="login-page">
+    <!-- 统一登录全屏加载过渡 -->
+    <page-loading
+      v-if="logging"
+      mode="fullscreen"
+      :text="role === 'merchant' ? '正在登录店家后台...' : '正在登录点餐系统...'"
+      :role="role"
+    />
     <!-- 顾客扫码识别桌位：固定右上角 -->
     <view v-if="role === 'customer'" class="scan-btn" @click="scanTable">
       <view class="scan-icon">

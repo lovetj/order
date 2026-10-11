@@ -1,5 +1,9 @@
 <template>
   <view class="page" @click="clearActive">
+    <!-- 统一页面加载动效 -->
+    <page-loading v-if="loading" text="正在加载菜品信息..." role="merchant" />
+
+    <block v-else>
     <!-- 未保存修改浮动高亮提示条 -->
     <view v-if="hasUnsaved" class="unsaved-alert-bar">
       <view class="unsaved-alert-left">
@@ -237,6 +241,7 @@
         <text class="loading-text">{{deleting ? '正在删除…' : '正在保存…'}}</text>
       </view>
     </view>
+    </block>
   </view>
 </template>
 
@@ -272,6 +277,7 @@ export default {
       submitting: false,
       deleting: false,
       uploading: false,
+      loading: false,
       // 是否存在未保存的改动：用于离页提醒与「未保存」提示
       hasUnsaved: false,
       forceBack: false,
@@ -424,6 +430,9 @@ export default {
     },
 
     loadCategories(id) {
+      if (id) {
+        this.loading = true
+      }
       api.getAllCategories().then((categories) => {
         const list = categories || []
         this.categories = list
@@ -436,8 +445,11 @@ export default {
         } else {
           this.hasUnsaved = false
           this.imageDirty = false
+          this.loading = false
         }
-      }).catch(() => {})
+      }).catch(() => {
+        this.loading = false
+      })
     },
 
     loadDish(id) {
@@ -489,7 +501,9 @@ export default {
           uni.disableAlertBeforeUnload()
           this._alertEnabled = false
         }
-      }).catch(() => {})
+      }).catch(() => {}).finally(() => {
+        this.loading = false
+      })
     },
 
     onInput(field, e) {

@@ -6,7 +6,10 @@
       <view class="header-link" @click="goMyCoupons">我的优惠券 ›</view>
     </view>
 
-    <template v-if="list.length > 0">
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载领券中心..." role="customer" />
+
+    <template v-else-if="list.length > 0">
       <view class="coupon-card" v-for="item in list" :key="item.id">
         <view class="coupon-left">
           <view class="coupon-amount">

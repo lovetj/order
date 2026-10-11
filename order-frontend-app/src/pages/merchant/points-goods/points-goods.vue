@@ -16,29 +16,34 @@
 
     <view class="tip">共 {{list.length}} 个积分商品</view>
 
-    <view class="goods-item" v-for="item in list" :key="item.id">
-      <view class="thumb">
-        <image v-if="item.imageUrl" class="thumb-img" :src="item.image" mode="aspectFill"></image>
-        <text v-else>{{item.image}}</text>
-      </view>
-      <view class="info">
-        <view class="name">{{item.name}}</view>
-        <view class="desc text-sub">{{item.description}}</view>
-        <view class="meta">
-          <text class="points">{{item.points}} 积分</text>
-          <text class="stock text-sub">{{item.stock < 0 ? '不限量' : '库存 ' + item.stock}}</text>
-          <text class="sales text-sub">已兑 {{item.exchangedCount}}</text>
-        </view>
-      </view>
-      <view class="actions">
-        <view class="shelf-tag" :class="item.status === 1 ? 'on' : 'off'" @click.stop="toggleStatus(item.id)">
-          {{item.status === 1 ? '已上架' : '已下架'}}
-        </view>
-        <view class="del-btn" @click.stop="deleteGoods(item.id)">删除</view>
-      </view>
-    </view>
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载积分商品..." role="merchant" />
 
-    <view v-if="list.length === 0" class="empty">暂无积分商品，点击右下角新增</view>
+    <template v-else-if="list.length > 0">
+      <view class="goods-item" v-for="item in list" :key="item.id">
+        <view class="thumb">
+          <image v-if="item.imageUrl" class="thumb-img" :src="item.image" mode="aspectFill"></image>
+          <text v-else>{{item.image}}</text>
+        </view>
+        <view class="info">
+          <view class="name">{{item.name}}</view>
+          <view class="desc text-sub">{{item.description}}</view>
+          <view class="meta">
+            <text class="points">{{item.points}} 积分</text>
+            <text class="stock text-sub">{{item.stock < 0 ? '不限量' : '库存 ' + item.stock}}</text>
+            <text class="sales text-sub">已兑 {{item.exchangedCount}}</text>
+          </view>
+        </view>
+        <view class="actions">
+          <view class="shelf-tag" :class="item.status === 1 ? 'on' : 'off'" @click.stop="toggleStatus(item.id)">
+            {{item.status === 1 ? '已上架' : '已下架'}}
+          </view>
+          <view class="del-btn" @click.stop="deleteGoods(item.id)">删除</view>
+        </view>
+      </view>
+    </template>
+
+    <view v-else class="empty">暂无积分商品，点击右下角新增</view>
 
     <view class="fab" @click="addGoods">＋</view>
   </view>

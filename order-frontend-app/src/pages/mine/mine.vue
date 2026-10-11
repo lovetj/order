@@ -12,7 +12,11 @@
         <view class="scan-tip-btn" @click="scanThenReload">立即扫码</view>
       </view>
     </view>
-    <scroll-view class="layout-body" scroll-y>
+
+    <!-- 统一页面加载动画 -->
+    <page-loading v-if="loading && !needScan" text="正在加载个人信息..." role="customer" />
+
+    <scroll-view v-else class="layout-body" scroll-y>
     <view class="user-card" @click="goMember">
       <view class="avatar">
         <image v-if="isAvatarUrl" class="avatar-img" :src="userInfo.avatar" mode="aspectFill" />
@@ -78,7 +82,8 @@ export default {
       ],
       couponCount: 0,
       points: 0,
-      needScan: false
+      needScan: false,
+      loading: false
     }
   },
 
@@ -97,12 +102,23 @@ export default {
     this.userInfo = userInfo
     this.isAvatarUrl = /^https?:\/\//.test(userInfo.avatar || '')
     this.tableNo = app.globalData.tableNo || '未获取'
-    this.loadUserInfo()
-    this.loadCounts()
-    this.loadMember()
+    this.loadAllData()
   },
 
   methods: {
+    loadAllData() {
+      if (!this.userInfo.nickName) {
+        this.loading = true
+      }
+      Promise.allSettled([
+        this.loadUserInfo(),
+        this.loadCounts(),
+        this.loadMember()
+      ]).finally(() => {
+        this.loading = false
+      })
+    },
+
     // 底部导航切换时刷新当前页面数据
     onTabRefresh() {
       if (!app.globalData.isLogin()) return
@@ -112,9 +128,7 @@ export default {
       this.userInfo = userInfo
       this.isAvatarUrl = /^https?:\/\//.test(userInfo.avatar || '')
       this.tableNo = app.globalData.tableNo || '未获取'
-      this.loadUserInfo()
-      this.loadCounts()
-      this.loadMember()
+      this.loadAllData()
     },
 
     // 扫码识别店铺/桌号后刷新页面
@@ -124,9 +138,7 @@ export default {
       this.needScan = false
       const userInfo = app.globalData.userInfo || {}
       this.tableNo = app.globalData.tableNo || '未获取'
-      this.loadUserInfo()
-      this.loadCounts()
-      this.loadMember()
+      this.loadAllData()
     },
 
     // 会员信息（积分 / 优惠券数量 / 等级）

@@ -1,5 +1,9 @@
 <template>
   <view class="page">
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载店铺设置..." role="merchant" />
+
+    <block v-else>
     <!-- 未保存修改浮动高亮提示条 -->
     <view v-if="hasUnsaved" class="unsaved-alert-bar">
       <view class="unsaved-alert-left">
@@ -109,6 +113,7 @@
         {{ saving ? '保存中...' : (hasUnsaved ? '保存店铺信息 (待保存)' : '保存店铺信息') }}
       </button>
     </view>
+    </block>
   </view>
 </template>
 
@@ -123,6 +128,7 @@ export default {
     return {
       saving: false,
       uploading: false,
+      loading: true,
       // 是否存在未保存的改动：用于离页提醒与「未保存」提示
       hasUnsaved: false,
       forceBack: false,
@@ -262,7 +268,9 @@ export default {
               height: 32
             }]
           : []
-      }).catch(() => {})
+      }).catch(() => {}).finally(() => {
+        this.loading = false
+      })
     },
 
     // 解析图片字段：支持逗号分隔 / JSON 数组，返回相对路径数组

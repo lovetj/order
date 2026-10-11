@@ -149,11 +149,8 @@
             <view class="empty-sub">去看看其他分类的美味佳肴吧</view>
           </view>
 
-          <!-- 首屏加载动画 -->
-          <view v-if="listLoading" class="list-loading">
-            <view class="mini-spinner"></view>
-            <text class="list-loading-text">正在加载菜单…</text>
-          </view>
+          <!-- 首屏加载动画（统一全系统加载动效） -->
+          <page-loading v-if="listLoading" text="正在加载菜单..." role="customer" />
 
           <!-- 触底追加加载动画 -->
           <view v-if="!listLoading && loadingMore" class="list-loading list-loading-more">

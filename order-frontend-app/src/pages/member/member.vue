@@ -1,5 +1,7 @@
 <template>
   <view class="page">
+    <page-loading v-if="loading" text="正在加载会员信息..." role="customer" />
+    <block v-else>
     <!-- 会员卡 -->
     <view class="member-card">
       <view class="member-top">
@@ -74,6 +76,7 @@
       </view>
       <text class="arrow">›</text>
     </view>
+    </block>
   </view>
 </template>
 

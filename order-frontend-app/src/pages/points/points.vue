@@ -14,7 +14,10 @@
 
     <view class="tip">1 元 = 1 积分，消费自动累积</view>
 
-    <view class="goods-grid">
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载积分商品..." role="customer" />
+
+    <view v-else-if="goods.length > 0" class="goods-grid">
       <view class="goods-item" v-for="item in goods" :key="item.id">
         <view class="goods-thumb">
           <image v-if="item.imageUrl" class="goods-thumb-img" :src="item.image" mode="aspectFill"></image>
@@ -33,7 +36,7 @@
       </view>
     </view>
 
-    <view v-if="goods.length === 0" class="empty">暂无可兑换商品</view>
+    <view v-else class="empty">暂无可兑换商品</view>
   </view>
 </template>
 

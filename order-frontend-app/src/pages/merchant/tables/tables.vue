@@ -82,8 +82,11 @@
       </view>
     </view>
 
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载桌位数据..." role="merchant" />
+
     <!-- 桌位卡片网格 -->
-    <view class="grid" v-if="filteredList.length > 0">
+    <view class="grid" v-else-if="filteredList.length > 0">
       <view
         class="table-card"
         :class="[item.status ? 'enabled' : 'disabled', item.type === '包房' ? 'is-room' : 'is-hall']"

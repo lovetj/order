@@ -10,7 +10,10 @@
       >{{item.name}}</view>
     </view>
 
-    <template v-if="list.length > 0">
+    <!-- 统一加载动效 -->
+    <page-loading v-if="loading" text="正在加载优惠券..." role="customer" />
+
+    <template v-else-if="list.length > 0">
       <view class="coupon-card" :class="{ disabled: item.status !== 0 }" v-for="item in list" :key="item.id">
         <view class="coupon-left">
           <view class="coupon-amount">
